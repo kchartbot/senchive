@@ -12,6 +12,7 @@ GROUP_KW = [k.strip() for k in os.environ.get("GROUP_KW", "센느,센둥이,리�
 GALLERIES = [g.split(":") for g in os.environ.get("GALLERIES", "mgallery:kpopcontent:20,mgallery:kpopgirlgroup:").split(",")]
 PAGES = int(os.environ.get("PAGES", "4"))
 MAXCLIP = int(os.environ.get("MAXCLIP", "14"))
+INC = {x.strip() for x in os.environ.get("INCLUDE", "").split(",") if x.strip()}   # 지정하면 이 파일만 내려받는다(중복 제거·개수 제한도 이 파일 안에서만)
 MAXIMG = int(os.environ.get("MAXIMG", "30"))   # 사진은 움짤과 같이 올린다 (디시 파일 50개 제한 안)
 ONLY = os.environ.get("EVENT_NAME", "").strip()
 YT = re.compile(r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|shorts/|live/))([\w-]{11})")
@@ -114,6 +115,7 @@ def collect(ev, today):
             else:
                 vlist.append(u0)
         for i, u in enumerate(vlist):
+            if INC and f"{p['no']}_v{i}" not in INC: continue
             b = d.S.get(u, headers={"Referer": p["url"]}, timeout=40); time.sleep(d.DELAY); h = b.content[:12]
             if not (b.ok and h[4:8] == b"ftyp" and len(b.content) <= 12_000_000): continue
             f = out / "media" / f"{p['no']}_v{i}.mp4"; f.write_bytes(b.content)
@@ -123,6 +125,7 @@ def collect(ev, today):
             if dup(ah): f.unlink(); continue
             hashes.append(ah); clips.append(dict(file=f.name, src=p["url"], title=p["title"], gallery=p["gallery"]))
         for i, u in enumerate(p.get("images", [])):
+            if INC and f"{p['no']}_{i}" not in INC: continue
             b = d.S.get(u, headers={"Referer": p["url"]}, timeout=30); time.sleep(d.DELAY); h = b.content[:12]
             ext = "gif" if h[:3] == b"GIF" else "png" if h[:4] == b"\x89PNG" else "jpg" if h[:3] == b"\xff\xd8\xff" else "webp" if h[:4] == b"RIFF" else None
             if not (b.ok and ext and len(b.content) <= 8_000_000): continue

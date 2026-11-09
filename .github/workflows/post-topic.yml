@@ -43,6 +43,7 @@ jobs:
           TOPIC: ${{ inputs.topic }}
           EVDATE: ${{ inputs.evdate }}
           POSTS: ${{ inputs.posts }}
+          INCLUDE: ${{ inputs.include }}
           GALLERIES: "mgallery:kpopcontent:"
         run: python tools/compose.py
       - name: 올리기
