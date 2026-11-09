@@ -1,0 +1,31 @@
+name: fan-route
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: fansign-scan 결과 가져오기
+        run: git fetch -q origin fan-data && mkdir -p out/fan && git --work-tree=out/fan checkout origin/fan-data -- . && git reset -q && ls out/fan | head -3
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-nanum
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -q --no-deps facenet-pytorch
+          pip install -q pillow requests tqdm "numpy<2.3"
+      - run: python tools/fan_route.py
+      - name: route-data 브랜치에 저장
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf out/route/_fr; cd out/route && git init -q -b route-data
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm route
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -qf origin route-data

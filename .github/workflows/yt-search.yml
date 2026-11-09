@@ -1,0 +1,16 @@
+name: yt-search
+on:
+  workflow_dispatch:
+    inputs:
+      q: {description: "검색어", default: "스포티파이 아이돌잔치 리센느"}
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install requests
+      - env:
+          Q: ${{ inputs.q }}
+        run: python tools/yt_search.py

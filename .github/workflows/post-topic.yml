@@ -1,0 +1,81 @@
+name: post-topic
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "떡밥 이름(제목에 들어감)"
+        default: "스포티파이"
+      posts:
+        description: "글 번호(쉼표). 비우면 키워드로 개념글 검색"
+        default: ""
+      links:
+        description: "본문 맨 위에 넣을 링크(공백/쉼표 구분)"
+        default: ""
+      include:
+        description: "올릴 파일 이름만(쉼표, 예: 177441_v0,177448_v0). 비우면 전부"
+        default: ""
+      evdate:
+        description: "행사 날짜 YYYY-MM-DD (비우면 오늘)"
+        default: ""
+      dry:
+        description: "true 면 올리지 않고 조립만"
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: post-topic
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install requests beautifulsoup4 pillow playwright
+          playwright install --with-deps chromium
+      - name: 개념글에서 모으기
+        env:
+          TOPIC: ${{ inputs.topic }}
+          EVDATE: ${{ inputs.evdate }}
+          POSTS: ${{ inputs.posts }}
+          GALLERIES: "mgallery:kpopcontent:"
+        run: python tools/compose.py
+      - name: 올리기
+        env:
+          EVENT_NAME: ${{ inputs.topic }}
+          INCLUDE: ${{ inputs.include }}
+          LINKS: ${{ inputs.links }}
+          CD_DIR: out
+          NO_YT_SEARCH: "1"
+          DRY_RUN: ${{ inputs.dry && 'true' || 'false' }}
+          DC_GALLERY_ID: ${{ vars.DC_GALLERY_ID || secrets.DC_GALLERY_ID }}
+          DC_KIND: ${{ vars.DC_KIND || secrets.DC_KIND }}
+          DC_MINOR: ${{ vars.DC_MINOR || secrets.DC_MINOR }}
+          DC_HEADTEXT: ${{ vars.DC_HEADTEXT }}
+          DC_HEAD_NO: ${{ vars.DC_HEAD_NO }}
+          DC_ID: ${{ secrets.DC_ID }}
+          DC_PW: ${{ secrets.DC_PW }}
+        run: python tools/post_compose.py
+      - name: 검토용으로 받은 파일 저장 (review-data 브랜치)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          T: ${{ inputs.topic }}
+        run: |
+          mkdir -p /tmp/rv && cp -r "out/$T"/* /tmp/rv/ 2>/dev/null || true
+          cd /tmp/rv && git init -q -b review-data
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm review
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -qf origin review-data
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: post-topic-out
+          path: out/*.png
+          if-no-files-found: ignore

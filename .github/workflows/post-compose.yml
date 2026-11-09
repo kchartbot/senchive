@@ -1,0 +1,52 @@
+name: post-compose
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "true 면 올리지 않고 준비만 확인"
+        type: boolean
+        default: true
+      maxfiles:
+        description: "올릴 파일 수 상한"
+        type: string
+        default: "50"
+permissions:
+  contents: read
+concurrency:
+  group: post-compose
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: compose-data
+          path: cd
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install playwright requests
+          playwright install --with-deps chromium
+      - name: 실행
+        env:
+          EVENT_NAME: 인기가요
+          MAX_FILES: ${{ inputs.maxfiles }}
+          DRY_RUN: ${{ inputs.dry && 'true' || 'false' }}
+          DC_GALLERY_ID: ${{ vars.DC_GALLERY_ID || secrets.DC_GALLERY_ID }}
+          DC_KIND: ${{ vars.DC_KIND || secrets.DC_KIND }}
+          DC_MINOR: ${{ vars.DC_MINOR || secrets.DC_MINOR }}
+          DC_HEADTEXT: ${{ vars.DC_HEADTEXT }}
+          DC_HEAD_NO: ${{ vars.DC_HEAD_NO }}
+          DC_ID: ${{ secrets.DC_ID }}
+          DC_PW: ${{ secrets.DC_PW }}
+        run: python tools/post_compose.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: post-compose-out
+          path: out/*.png
+          if-no-files-found: ignore

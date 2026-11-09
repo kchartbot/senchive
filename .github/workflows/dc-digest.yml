@@ -1,0 +1,33 @@
+name: dc-digest
+on:
+  workflow_dispatch:
+    inputs:
+      top: {description: "가져올 글 수", default: "10"}
+      pages: {description: "목록 페이지 수", default: "3"}
+      keywords: {description: "제목 키워드(쉼표)", default: "리센느,원이,리브,미나미,메이,제나,센둥이,인기가요,인가,엔딩,직캠,무대"}
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install requests beautifulsoup4
+      - run: python tools/dc_digest.py
+        env:
+          TOP: ${{ inputs.top }}
+          PAGES: ${{ inputs.pages }}
+          KEYWORDS: ${{ inputs.keywords }}
+      - name: save result to data branch
+        if: always()
+        run: |
+          [ -d out ] || exit 0
+          cd out && git init -q -b data && git add -A
+          git -c user.name=github-actions -c user.email=actions@users.noreply.github.com commit -q -m "digest $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: digest, path: out/, if-no-files-found: ignore}
