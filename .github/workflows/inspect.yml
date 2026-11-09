@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: pip install requests beautifulsoup4
       - env:
-          DC_GALLERY_ID: ${{ vars.DC_GALLERY_ID || secrets.DC_GALLERY_ID }}
+          DC_GALLERY_ID: ${{ secrets.DC_GALLERY_ID }}
           DC_KIND: ${{ vars.DC_KIND || secrets.DC_KIND }}
           N: "3"
         run: python tools/inspect_post.py

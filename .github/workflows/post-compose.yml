@@ -36,7 +36,7 @@ jobs:
           EVENT_NAME: 인기가요
           MAX_FILES: ${{ inputs.maxfiles }}
           DRY_RUN: ${{ inputs.dry && 'true' || 'false' }}
-          DC_GALLERY_ID: ${{ vars.DC_GALLERY_ID || secrets.DC_GALLERY_ID }}
+          DC_GALLERY_ID: ${{ secrets.DC_GALLERY_ID }}
           DC_KIND: ${{ vars.DC_KIND || secrets.DC_KIND }}
           DC_MINOR: ${{ vars.DC_MINOR || secrets.DC_MINOR }}
           DC_HEADTEXT: ${{ vars.DC_HEADTEXT }}
