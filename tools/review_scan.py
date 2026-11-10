@@ -13,7 +13,8 @@ MAXP = int(os.environ.get("MAXP", "12"))
 MAXPOSTS = int(os.environ.get("MAXPOSTS", "0"))   # 0 = 제한 없음
 MAXFILES = int(os.environ.get("MAXFILES", "40"))
 RECOMMEND = os.environ.get("RECOMMEND", "true").lower() != "false"   # false 면 개념글이 아닌 글도 훑는다
-HEAD_OFF = {h.strip() for h in os.environ.get("HEAD_OFF", "").split(",") if h.strip()}   # 건너뛸 말머리
+def nh(h): return (h or "").replace("\ufe0f", "").replace(" ", "").strip() or "(없음)"   # 이모지 변형문자·공백 차이를 무시
+HEAD_OFF = {nh(h) for h in os.environ.get("HEAD_OFF", "").split(",") if h.strip()}   # 건너뛸 말머리
 d.GALL, d.KIND, d.HEAD = "kpopcontent", "mgallery", ""
 def kw(env, default):
     v = os.environ.get(env, "").strip()
@@ -66,12 +67,12 @@ def frame_thumb(src, name, headers=""):
 def main():
     rs = rows(); posts = []
     heads = {}
-    for r in rs: heads[r["head"] or "(없음)"] = heads.get(r["head"] or "(없음)", 0) + 1
+    for r in rs: heads[nh(r["head"])] = heads.get(nh(r["head"]), 0) + 1
     print("개념글", len(rs))
     read = 0
     for r in rs:
         if MAXPOSTS and read >= MAXPOSTS: print("글 수 제한에 도달", MAXPOSTS); break
-        if (r["head"] or "(없음)") in HEAD_OFF: continue
+        if nh(r["head"]) in HEAD_OFF: continue
         if OUT_KW.search(r["title"]) or any(k in r["title"] for k in OTHER): continue
         read += 1
         try: p = d.post(r["no"])
