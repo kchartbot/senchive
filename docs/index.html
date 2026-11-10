@@ -122,7 +122,7 @@ const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s),okUrl=s=>/^https?:\/\/[^\s"'<>`]
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const DEF={include:"리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈".split(","),exclude:"버블,디콘,dccon,밈".split(","),other:"베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈".split(","),bait:"비하인드,떴다,떳다".split(",")};
 const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 수집)",exclude:"제외 키워드 (제목에 있으면 건너뜀)",other:"다른 그룹 (제목에 있으면 건너뜀)",bait:"떡밥 키워드 (★ 표시)"};
-let token=LS.get("tk")||"",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
+let token="",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
 let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
 const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 let sinceISO=kstDay(),evdate=kstDay(),topic="",pages=+LS.get("pg")||12,maxposts=+LS.get("mp")||0;
@@ -191,7 +191,7 @@ function rList(){
     ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
     <div class="pb"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="pm">파일 없음 (링크만)</div>'}
     ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
-  $("#logout").onclick=()=>{LS.del("tk");token="";idx=null;start()};
+  $("#logout").onclick=()=>{LS.del("tk");LS.del("tke");token="";idx=null;start()};
   $("#since").onchange=e=>{sinceISO=e.target.value};
   $("#pg").onchange=e=>{pages=Math.max(1,Math.min(30,+e.target.value||12));LS.set("pg",pages);e.target.value=pages};
   $("#mp").onchange=e=>{maxposts=Math.max(0,Math.min(300,+e.target.value||0));LS.set("mp",maxposts);e.target.value=maxposts};
@@ -310,18 +310,38 @@ async function load(){
   try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=clean(await r.json());
     const ids=new Set(all().map(f=>f.id));sel=sel.filter(i=>ids.has(i));if(!ids.has(cur))cur=null}catch(e){idx=null}
 }
+const b64=u=>btoa(String.fromCharCode(...u)),unb=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+async function pkey(pw,salt){const m=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:300000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function seal(tk,pw){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await pkey(pw,salt),new TextEncoder().encode(tk)));
+  return JSON.stringify({s:b64(salt),i:b64(iv),c:b64(ct)})}
+async function unseal(blob,pw){const o=JSON.parse(blob);
+  return new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(o.i)},await pkey(pw,unb(o.s)),unb(o.c)))}
+function renderLock(){
+  $("#app").style.display="block";
+  $("#app").innerHTML=`<div class="setup"><h2 style="margin:0">센카이브</h2><b>비밀번호를 입력하세요</b>
+   <input id="pw" type="password" placeholder="비밀번호" autocomplete="off"><button class="go" id="unlock">열기</button><div class="sub" id="pwst"></div>
+   <div class="sub"><a href="#" id="reset" style="color:var(--acc)">비밀번호를 잊었어요 (토큰 다시 입력)</a></div></div>`;
+  const go=async()=>{const pw=$("#pw").value;if(!pw)return;$("#pwst").textContent="확인 중…";
+    try{token=await unseal(LS.get("tke"),pw);$("#app").style.display="";start()}catch(e){token="";$("#pwst").textContent="비밀번호가 맞지 않습니다"}};
+  $("#unlock").onclick=go;$("#pw").onkeydown=e=>{if(e.key==="Enter")go()};$("#pw").focus();
+  $("#reset").onclick=e=>{e.preventDefault();LS.del("tke");LS.del("tk");start()};
+}
 function renderSetup(){
   $("#app").style.display="block";
   $("#app").innerHTML=`<div class="setup"><h2 style="margin:0">센카이브</h2><b>처음 한 번 토큰을 넣어 주세요</b>
    <ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">GitHub 토큰 만들기</a></li>
    <li>Repository access는 <b>Only select repositories → senchive</b></li><li>Repository permissions: <b>Actions = Read and write</b>, <b>Contents = Read-only</b></li>
-   <li>만든 토큰을 아래에 붙여넣기 (이 기기 브라우저에만 저장됩니다)</li></ol>
-   <input id="tk" type="password" placeholder="github_pat_..." autocomplete="off"><button class="go" id="tksave">저장</button><div class="sub" id="tkst"></div></div>`;
-  $("#tksave").onclick=async()=>{token=$("#tk").value.trim();if(!token)return;
-    try{await gh(`/repos/${REPO}`);LS.set("tk",token);$("#app").style.display="";start()}catch(e){token="";$("#tkst").textContent="토큰이 맞지 않습니다: "+e.message}};
+   <li>만든 토큰과, 이 툴을 열 때 쓸 비밀번호를 아래에 입력 (토큰은 비밀번호로 암호화되어 이 기기 브라우저에만 저장됩니다)</li></ol>
+   <input id="tk" type="password" placeholder="github_pat_..." autocomplete="off"><input id="pw1" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="off"><button class="go" id="tksave">저장</button><div class="sub" id="tkst"></div></div>`;
+  $("#tksave").onclick=async()=>{const t=$("#tk").value.trim(),pw=$("#pw1").value;if(!t)return;
+    if(pw.length<6){$("#tkst").textContent="비밀번호는 6자 이상이어야 합니다";return}
+    token=t;
+    try{await gh(`/repos/${REPO}`);LS.set("tke",await seal(t,pw));LS.del("tk");$("#app").style.display="";start()}catch(e){token="";$("#tkst").textContent="토큰이 맞지 않습니다: "+e.message}};
 }
 async function start(){
-  if(!token){renderSetup();return}
+  if(!token){LS.get("tke")?renderLock():renderSetup();return}
   build();setStatus("불러오는 중…");await load();status="";build();
 }
 start();
