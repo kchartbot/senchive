@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>센카이브 검수</title>
+<style>
+:root{--bg:#f4f3f1;--s1:#fff;--s2:#ecebe8;--fg:#18171a;--mute:#8a8780;--line:#e4e2de;--acc:#e0527a;--accfg:#fff;--ok:#2e9e6b;--warn:#c47a10;--shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0e0e10;--s1:#18181b;--s2:#232327;--fg:#f2f1f4;--mute:#85838c;--line:#26262b;--acc:#ff7a9c;--accfg:#1a0b10;--ok:#52d39a;--warn:#f0b050;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Noto Sans KR",-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;padding:0 max(16px,env(safe-area-inset-left)) 170px max(16px,env(safe-area-inset-right));-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,.ph:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input{font:inherit;color:var(--fg)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 0 14px}
+.top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.03em}
+.sub{font-size:13px;color:var(--mute)}
+.scanrow{display:flex;gap:8px;align-items:center}
+.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;width:118px}
+.scan{background:var(--fg);color:var(--bg);border-radius:999px;padding:9px 20px;font-weight:500;font-size:14px;white-space:nowrap}
+.scan:disabled{opacity:.45;cursor:default}
+.post{background:var(--s1);border-radius:20px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.ph-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+.ph-head a{color:var(--fg);text-decoration:none;font-weight:700;letter-spacing:-.02em;line-height:1.35}
+.meta{font-size:12px;color:var(--mute);margin-top:2px}
+.sel{font-size:12px;color:var(--acc);white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+@media(min-width:560px){.grid{grid-template-columns:repeat(5,1fr)}}
+.ph{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--s2) center/cover;cursor:pointer;transition:transform .12s}
+.ph:active{transform:scale(.96)}
+.ph .chk{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:50%;background:var(--acc);color:var(--accfg);display:none;place-items:center;font-size:13px;font-weight:700}
+.ph[data-on=true]{box-shadow:inset 0 0 0 3px var(--acc)}
+.ph[data-on=true] .chk{display:grid}
+.kind{position:absolute;left:6px;top:6px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);padding:0 7px;border-radius:999px}
+.lk{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.lk label{display:flex;gap:6px;align-items:center;font-size:12px;background:var(--s2);border-radius:999px;padding:3px 10px;max-width:100%}
+.lk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.postbtns{display:flex;gap:12px;margin-top:10px;font-size:12px}
+.postbtns button{color:var(--acc)}
+.empty{padding:80px 10px;text-align:center;color:var(--mute);display:grid;gap:6px}.empty b{color:var(--fg);font-size:16px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px max(16px,env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+.barin{max-width:760px;margin:0 auto;display:grid;gap:10px}
+.line{display:flex;gap:10px;align-items:center}
+.tin{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px}
+.dtin{width:112px;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
+.cnt{font-size:13px;color:var(--mute);line-height:1.35;font-variant-numeric:tabular-nums;flex:1;min-width:0}
+.cnt b{color:var(--fg);font-size:16px}.over{color:var(--warn)}
+.go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:999px;padding:12px 26px;font-size:15px}
+.go:disabled{opacity:.4;cursor:default}
+.ghost{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:end center;z-index:10}
+.sheet>div{background:var(--s1);width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:22px max(18px,env(safe-area-inset-left)) calc(22px + env(safe-area-inset-bottom));display:grid;gap:12px}
+.sheet h2{margin:0;font-size:18px;letter-spacing:-.02em}
+.sheet p{margin:0;font-size:14px;overflow-wrap:anywhere}
+.sheet .row{display:flex;gap:10px;justify-content:flex-end}
+.st{font-size:13px;color:var(--mute)}
+.setup{background:var(--s1);border-radius:20px;padding:20px;box-shadow:var(--shadow);display:grid;gap:12px;margin-top:10px}
+.setup ol{margin:0;padding-left:20px;font-size:13px;color:var(--mute)}
+.setup a{color:var(--acc)}
+</style></head><body>
+<div class="wrap" id="app"></div>
+<div class="bar" id="bar" hidden><div class="barin" id="barin"></div></div>
+<div id="sheet"></div>
+<script>
+const REPO="kchartbot/senchive",API="https://api.github.com";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+let token=LS.get("tk")||"",idx=null,sel=new Set(),linkOff=new Set(),status="",busy=false;
+const kstDay=()=>{const d=new Date(Date.now()+9*3600e3);return d.toISOString().slice(0,10)};
+let since=kstDay().replace(/-/g,"."),evdate=kstDay(),topic=LS.get("topic")||"";
+
+async function gh(path,opt={}){
+  const r=await fetch(API+path,{...opt,headers:{Authorization:"Bearer "+token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+  if(!r.ok){const t=await r.text();throw new Error(r.status+" "+t.slice(0,160))}
+  return r.status===204?null:r;
+}
+const thumbUrl=id=>`https://raw.githubusercontent.com/${REPO}/review-scan/t/${id}.jpg?v=${idx?.run||""}`;
+const files=()=>idx.posts.flatMap(p=>p.files.map(f=>({...f,no:p.no})));
+const chosen=()=>files().filter(f=>sel.has(f.id));
+function counts(){const c=chosen();return{c:c.filter(f=>f.t==="clip").length,i:c.filter(f=>f.t!=="clip").length}}
+function chosenLinks(){const nos=new Set(chosen().map(f=>f.no));return [...new Set(idx.posts.filter(p=>nos.has(p.no)).flatMap(p=>p.links))].filter(l=>!linkOff.has(l))}
+function titleOf(){const k=counts(),l=chosenLinks().length,p=k.c+k.i;return `[${evdate.replace(/-/g,"")}] ${topic||"○○"} ${l&&p?"링크+짤 모음":l?"링크 모음":"짤 모음"}`}
+
+function renderSetup(){
+  $("#bar").hidden=true;
+  $("#app").innerHTML=`<div class="top"><h1>센카이브</h1></div><div class="setup"><b>처음 한 번 토큰을 넣어 주세요</b>
+   <ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 토큰 만들기</a></li>
+   <li>저장소는 <b>senchive</b>만 선택</li><li>권한은 <b>Actions: Read and write</b>, <b>Contents: Read-only</b></li>
+   <li>만든 토큰을 아래에 붙여넣기 (이 기기 브라우저에만 저장됩니다)</li></ol>
+   <input class="tin" id="tk" type="password" placeholder="github_pat_..." autocomplete="off"><button class="go" id="tksave">저장</button><div class="st" id="tkst"></div></div>`;
+  $("#tksave").onclick=async()=>{token=$("#tk").value.trim();if(!token)return;
+    try{await gh(`/repos/${REPO}`);LS.set("tk",token);start()}catch(e){token="";$("#tkst").textContent="토큰이 맞지 않습니다: "+e.message}};
+}
+function render(){
+  $("#app").innerHTML=`
+   <div class="top"><div><h1>센카이브</h1><div class="sub" id="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div></div>
+   <div class="scanrow"><input class="date" id="since" value="${esc(since)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button></div></div>
+   <div class="st" id="st" style="margin-bottom:12px">${esc(status)}</div>
+   ${idx&&idx.posts.length?idx.posts.map(p=>{const n=p.files.filter(f=>sel.has(f.id)).length;return `<section class="post" data-no="${p.no}">
+     <div class="ph-head"><div><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a><div class="meta">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel">${n?n+"개 선택":""}</span></div>
+     ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" data-on="${sel.has(f.id)}" role="checkbox" aria-checked="${sel.has(f.id)}" aria-label="${f.id}" tabindex="0" style="background-image:url('${thumbUrl(f.id)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="chk">✓</span></div>`).join("")}</div>
+     <div class="postbtns"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="meta">파일 없음 (링크만)</div>'}
+     ${p.links.length?`<div class="lk">${p.links.map(l=>`<label><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l.replace(/^https?:\/\/(www\.)?/,""))}</span></label>`).join("")}</div>`:""}
+   </section>`}).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b>위의 스캔을 눌러 주세요</div>`}`;
+  $("#since").onchange=e=>{since=e.target.value.trim()};
+  $("#scan").onclick=doScan;
+  document.querySelectorAll(".ph").forEach(t=>{const tg=()=>{const id=t.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);t.dataset.on=sel.has(id);t.setAttribute("aria-checked",sel.has(id));updPost(t.closest(".post"));bar()};
+    t.onclick=tg;t.onkeydown=e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();tg()}}});
+  document.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.all).files.forEach(f=>sel.add(f.id));render();bar()});
+  document.querySelectorAll("[data-none]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.none).files.forEach(f=>sel.delete(f.id));render();bar()});
+  document.querySelectorAll("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);bar()});
+  bar();
+}
+function updPost(sec){const p=idx.posts.find(x=>x.no==sec.dataset.no),n=p.files.filter(f=>sel.has(f.id)).length;sec.querySelector(".sel").textContent=n?n+"개 선택":""}
+function bar(){
+  if(!idx){$("#bar").hidden=true;return}
+  $("#bar").hidden=false;const k=counts(),tot=k.c+k.i;
+  $("#barin").innerHTML=`<div class="line"><input class="tin" id="topic" placeholder="글 주제 (제목에 들어감)" value="${esc(topic)}"><input class="dtin" id="ev" value="${esc(evdate)}" aria-label="행사 날짜"></div>
+   <div class="line"><div class="cnt"><b>${tot}개 선택</b> · 사진 <span class="${k.i>30?"over":""}">${k.i}/30</span> · 움짤 <span class="${k.c>14?"over":""}">${k.c}/14</span><br><span id="tt" style="overflow-wrap:anywhere">${esc(titleOf())}</span></div>
+   <button class="go" id="up" ${tot&&topic.trim()&&!busy?"":"disabled"}>업로드</button></div>`;
+  $("#topic").oninput=e=>{topic=e.target.value;LS.set("topic",topic);$("#tt").textContent=titleOf();$("#up").disabled=!(counts().c+counts().i&&topic.trim()&&!busy)};
+  $("#ev").onchange=e=>{evdate=e.target.value.trim();$("#tt").textContent=titleOf()};
+  $("#up").onclick=confirmUp;
+}
+function confirmUp(){
+  const k=counts(),L=chosenLinks();
+  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 업로드할까요?</h2><p><b>${esc(titleOf())}</b></p><p class="st">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="ghost" id="no">취소</button><button class="go" id="yes">업로드</button></div></div></div>`;
+  $("#no").onclick=()=>$("#sheet").innerHTML="";
+  $("#yes").onclick=()=>{$("#sheet").innerHTML="";doUpload()};
+}
+async function waitRun(wf,after,label){
+  for(let i=0;i<240;i++){
+    await new Promise(r=>setTimeout(r,6000));
+    const r=await (await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?event=workflow_dispatch&per_page=3`)).json();
+    const run=r.workflow_runs.find(x=>new Date(x.created_at).getTime()>=after-5000);
+    if(run){status=`${label} ${run.status==="completed"?"":"진행 중…"}`;setSt();
+      if(run.status==="completed")return run.conclusion}
+  }
+  return "timeout";
+}
+function setSt(){const e=$("#st");if(e)e.textContent=status}
+async function doScan(){
+  if(busy)return;busy=true;status="스캔을 요청했습니다";render();
+  try{const t0=Date.now();
+    await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{since}})});
+    const c=await waitRun("review-scan.yml",t0,"스캔");
+    if(c!=="success"){status="스캔 실패 ("+c+")";busy=false;render();return}
+    await load();status="스캔 완료"
+  }catch(e){status="오류: "+e.message}
+  busy=false;render();
+}
+async function doUpload(){
+  if(busy)return;const k=counts();if(!k.c&&!k.i)return;
+  busy=true;status="업로드를 요청했습니다";render();
+  try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))];
+    await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
+    const c=await waitRun("post-topic.yml",t0,"업로드");
+    status=c==="success"?"업로드 완료":"업로드 실패 ("+c+")";
+    if(c==="success"){sel.clear()}
+  }catch(e){status="오류: "+e.message}
+  busy=false;render();
+}
+async function load(){
+  try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=await r.json();
+    const ids=new Set(files().map(f=>f.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)})}catch(e){idx=null}
+}
+async function start(){
+  if(!token){renderSetup();return}
+  status="불러오는 중…";render();await load();status="";render();
+}
+start();
+</script></body></html>
