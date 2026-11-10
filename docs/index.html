@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><title>센카이브 검수</title>
+<meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; connect-src https://api.github.com; base-uri 'none'; form-action 'none'"><title>센카이브 검수</title>
 <style>
 :root{--bg:#f4f3f1;--s1:#fff;--s2:#ecebe8;--fg:#18171a;--mute:#8a8780;--line:#e4e2de;--acc:#e0527a;--accfg:#fff;--ok:#2e9e6b;--warn:#c47a10;--shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#0e0e10;--s1:#18181b;--s2:#232327;--fg:#f2f1f4;--mute:#85838c;--line:#26262b;--acc:#ff7a9c;--accfg:#1a0b10;--ok:#52d39a;--warn:#f0b050;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);color-scheme:dark}}
@@ -62,7 +62,8 @@ input{font:inherit;color:var(--fg)}
 <script>
 const REPO="kchartbot/senchive",API="https://api.github.com";
 const $=s=>document.querySelector(s);
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc=s=>String(s??"").replace(/[&<>"'`]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;","`":"&#96;"}[c]));
+const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s), okUrl=s=>/^https?:\/\/[^\s"'<>`]+$/i.test(s);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 let token=LS.get("tk")||"",idx=null,sel=new Set(),linkOff=new Set(),status="",busy=false;
 const kstDay=()=>{const d=new Date(Date.now()+9*3600e3);return d.toISOString().slice(0,10)};
@@ -92,7 +93,7 @@ function renderSetup(){
 }
 function render(){
   $("#app").innerHTML=`
-   <div class="top"><div><h1>센카이브</h1><div class="sub" id="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div></div>
+   <div class="top"><div><h1>센카이브</h1><div class="sub" id="sub"><button id="logout" style="color:var(--mute);font-size:12px;text-decoration:underline;margin-right:6px">토큰 지우기</button>${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div></div>
    <div class="scanrow"><input class="date" id="since" value="${esc(since)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button></div></div>
    <div class="st" id="st" style="margin-bottom:12px">${esc(status)}</div>
    ${idx&&idx.posts.length?idx.posts.map(p=>{const n=p.files.filter(f=>sel.has(f.id)).length;return `<section class="post" data-no="${p.no}">
@@ -101,6 +102,7 @@ function render(){
      <div class="postbtns"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="meta">파일 없음 (링크만)</div>'}
      ${p.links.length?`<div class="lk">${p.links.map(l=>`<label><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l.replace(/^https?:\/\/(www\.)?/,""))}</span></label>`).join("")}</div>`:""}
    </section>`}).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b>위의 스캔을 눌러 주세요</div>`}`;
+  $("#logout").onclick=()=>{LS.del("tk");token="";idx=null;start()};
   $("#since").onchange=e=>{since=e.target.value.trim()};
   $("#scan").onclick=doScan;
   document.querySelectorAll(".ph").forEach(t=>{const tg=()=>{const id=t.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);t.dataset.on=sel.has(id);t.setAttribute("aria-checked",sel.has(id));updPost(t.closest(".post"));bar()};
@@ -139,7 +141,8 @@ async function waitRun(wf,after,label){
 }
 function setSt(){const e=$("#st");if(e)e.textContent=status}
 async function doScan(){
-  if(busy)return;busy=true;status="스캔을 요청했습니다";render();
+  if(busy)return;
+  if(!/^\d{4}\.\d{2}\.\d{2}$/.test(since)){status="스캔 날짜는 YYYY.MM.DD 형식이어야 합니다";render();return}busy=true;status="스캔을 요청했습니다";render();
   try{const t0=Date.now();
     await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{since}})});
     const c=await waitRun("review-scan.yml",t0,"스캔");
@@ -150,6 +153,8 @@ async function doScan(){
 }
 async function doUpload(){
   if(busy)return;const k=counts();if(!k.c&&!k.i)return;
+  if(!/^[^\/\\\n\r"`$]{1,50}$/.test(topic.trim())||topic.includes("..")){status="주제에 쓸 수 없는 문자가 있거나 너무 깁니다";render();return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(evdate)){status="행사 날짜는 YYYY-MM-DD 형식이어야 합니다";render();return}
   busy=true;status="업로드를 요청했습니다";render();
   try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))];
     await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
@@ -159,8 +164,15 @@ async function doUpload(){
   }catch(e){status="오류: "+e.message}
   busy=false;render();
 }
+function clean(x){
+  const posts=(Array.isArray(x?.posts)?x.posts:[]).map(p=>({no:String(p.no).replace(/\D/g,""),title:String(p.title||"").slice(0,200),when:String(p.when||"").slice(0,20),head:String(p.head||"").slice(0,20),
+    rec:+p.rec||0,views:+p.views||0,url:okUrl(String(p.url||""))&&/^https:\/\/gall\.dcinside\.com\//.test(p.url)?p.url:"#",
+    links:(Array.isArray(p.links)?p.links:[]).map(String).filter(okUrl).slice(0,20),
+    files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img"})).slice(0,80)})).filter(p=>p.no);
+  return {generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),since:String(x?.since||""),posts};
+}
 async function load(){
-  try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=await r.json();
+  try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=clean(await r.json());
     const ids=new Set(files().map(f=>f.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)})}catch(e){idx=null}
 }
 async function start(){

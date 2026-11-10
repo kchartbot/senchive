@@ -30,6 +30,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
+      - name: 입력 검사
+        env:
+          T: ${{ inputs.topic }}
+          P: ${{ inputs.posts }}
+          I: ${{ inputs.include }}
+          L: ${{ inputs.links }}
+          E: ${{ inputs.evdate }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          t, p, i, l, e = (os.environ[k] for k in "TPILE")
+          bad = []
+          if not t.strip() or len(t) > 60 or re.search(r'[/\\\n\r"`$]', t) or ".." in t: bad.append("topic")
+          if not re.fullmatch(r"[0-9,]*", p): bad.append("posts")
+          if not re.fullmatch(r"[A-Za-z0-9_,]*", i): bad.append("include")
+          if any(not re.fullmatch(r"https?://[^\s\"'<>`]+", x) for x in re.split(r"[\s,]+", l.strip()) if x): bad.append("links")
+          if e and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", e): bad.append("evdate")
+          if bad: sys.exit("잘못된 입력: " + ",".join(bad))
+          PY
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
