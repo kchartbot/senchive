@@ -41,7 +41,7 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .add button,.mini{background:var(--s2);border-radius:8px;padding:6px 12px;font-size:12px}
 /* 목록 */
 .scanrow{display:flex;gap:6px;align-items:center;margin-top:8px}
-.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;width:108px}
+.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;width:140px}
 .scan{background:var(--fg);color:var(--bg);border-radius:999px;padding:7px 18px;font-weight:500;font-size:13px}
 .scan:disabled{opacity:.45;cursor:default}
 .post{padding:12px 12px 4px}
@@ -89,13 +89,16 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .w .ed .im div[data-c=true]{outline:2px solid #3b4890}
 .w .cn{display:flex;gap:14px;font-size:13px;color:#444;flex-wrap:wrap}
 .w .cn b{color:#111}.w .over{color:#c0392b;font-weight:700}
-.w .ev{width:130px;border:1px solid #ccc;padding:7px 8px;font-size:13px;background:#fff;color:#111}
+.w .ev{width:160px;border:1px solid #ccc;padding:7px 8px;font-size:13px;background:#fff;color:#111}
 .w .btns{display:flex;gap:8px;justify-content:center;padding-top:4px}
 .w .reg{background:#3b4890;color:#fff;font-weight:700;padding:11px 44px;font-size:15px;border:1px solid #3b4890}
 .w .reg:disabled{opacity:.4;cursor:default}
 .w .cx{background:#fff;color:#333;border:1px solid #ccc;padding:11px 22px;font-size:14px}
 .w .st{font-size:12px;color:#666;text-align:center;min-height:18px}
 .w .pv{font-size:11px;color:#888;margin-top:4px;overflow-wrap:anywhere}
+.opts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mute)}
+.opts input{width:58px;background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12px}
+.stop{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--warn)}
 .gl{display:flex;justify-content:space-between;font-size:12px;margin:8px 0 4px}
 .gauge{height:6px;border-radius:99px;background:var(--s2);overflow:hidden}
 .gauge i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .8s linear}
@@ -122,7 +125,7 @@ const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 �
 let token=LS.get("tk")||"",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
 let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
 const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
-let since=kstDay().replace(/-/g,"."),evdate=kstDay(),topic="";
+let sinceISO=kstDay(),evdate=kstDay(),topic="",pages=+LS.get("pg")||12,maxposts=+LS.get("mp")||0;
 const KW=()=>kw||(idx&&idx.kw)||DEF;
 
 async function gh(path,opt={}){
@@ -180,14 +183,20 @@ function rList(){
   const P=$("#pList");
   P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" style="color:var(--mute);font-size:11px;text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
    <div class="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div>
-   <div class="scanrow"><input class="date" id="since" value="${esc(since)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button></div>
+   <div class="scanrow"><input class="date" type="date" id="since" value="${esc(sinceISO)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button>${prog&&prog.kind==="scan"?'<button class="stop" id="stop">취소</button>':""}</div>
+   <div class="opts"><label>페이지 <input type="number" id="pg" min="1" max="30" value="${pages}"></label><label>글 최대 <input type="number" id="mp" min="0" max="300" value="${maxposts}" title="0이면 제한 없음"></label>
+     <button class="mini" data-pre="3,20">빠르게</button><button class="mini" data-pre="6,40">보통</button><button class="mini" data-pre="12,0">전체</button></div>
    <div class="sub" id="st" style="margin-top:6px">${esc(status)}</div><div id="gS"></div></div>`+
    (idx&&idx.posts.length?idx.posts.map(p=>`<div class="post" data-no="${p.no}"><div class="pt"><div><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="star">★</span>':""}${esc(p.title)}</a><div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel"></span></div>
     ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
     <div class="pb"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="pm">파일 없음 (링크만)</div>'}
     ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
   $("#logout").onclick=()=>{LS.del("tk");token="";idx=null;start()};
-  $("#since").onchange=e=>{since=e.target.value.trim()};
+  $("#since").onchange=e=>{sinceISO=e.target.value};
+  $("#pg").onchange=e=>{pages=Math.max(1,Math.min(30,+e.target.value||12));LS.set("pg",pages);e.target.value=pages};
+  $("#mp").onchange=e=>{maxposts=Math.max(0,Math.min(300,+e.target.value||0));LS.set("mp",maxposts);e.target.value=maxposts};
+  $$("[data-pre]").forEach(b=>b.onclick=()=>{[pages,maxposts]=b.dataset.pre.split(",").map(Number);LS.set("pg",pages);LS.set("mp",maxposts);$("#pg").value=pages;$("#mp").value=maxposts});
+  if($("#stop"))$("#stop").onclick=cancelRun;
   $("#scan").onclick=doScan;
   $$(".ph").forEach(t=>{t.onclick=e=>{if(e.target.dataset.ck){toggle(e.target.dataset.ck);return}show(t.dataset.id)};t.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();show(t.dataset.id)}else if(e.key===" "){e.preventDefault();toggle(t.dataset.id)}}});
   $$("[data-all]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.all).files.forEach(f=>{if(!sel.includes(f.id))sel.push(f.id)});sync()});
@@ -218,23 +227,29 @@ function rWrite(){
   const P=$("#pWrite"),k=cnt(),tot=k.c+k.i,ch=chosen(),links=idx?[...new Set(idx.posts.filter(p=>new Set(ch.map(f=>f.no)).has(p.no)).flatMap(p=>p.links))]:[];
   P.innerHTML=`<div class="w"><div class="top">글쓰기</div><div class="box">
    <div><label>제목</label><div class="ttl"><input id="topic" placeholder="제목을 입력하세요" value="${esc(topic)}" maxlength="50"></div></div>
-   <div><label>행사 날짜</label><input class="ev" id="ev" value="${esc(evdate)}"></div>
+   <div><label>행사 날짜</label><input class="ev" type="date" id="ev" value="${esc(evdate)}"></div>
    <div><label>본문</label><div class="ed">
      ${links.map(l=>`<div class="lk"><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l)}</span></div>`).join("")}
      ${ch.length?`<div class="im">${ch.map(f=>`<div data-v="${f.id}" data-c="${f.id===cur}" style="background-image:url('${tUrl(f)}')" title="${esc(f.id)}"></div>`).join("")}</div>`:`<div style="color:#999;font-size:13px">선택한 사진·움짤이 여기에 순서대로 들어갑니다</div>`}
    </div></div>
    <div class="cn"><span>사진 <b class="${k.i>30?"over":""}">${k.i}</b>/30</span><span>움짤 <b class="${k.c>14?"over":""}">${k.c}</b>/14</span><span>합계 <b class="${tot>50?"over":""}">${tot}</b>/50</span></div>
    <div class="btns"><button class="reg" id="up" ${tot&&topic.trim()&&!busy&&idx?"":"disabled"}>등록</button><button class="cx" id="clr">선택 비우기</button></div>
-   <div class="st">${esc(status)}</div><div id="gU"></div></div></div>`;
+   <div class="st">${esc(status)}</div><div id="gU"></div>${prog&&prog.kind==="up"?'<div class="btns"><button class="cx" id="stop">업로드 취소</button></div>':""}</div></div>`;
   $("#topic").oninput=e=>{topic=e.target.value;$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
   $("#topic").onchange=()=>rWrite();
   $("#ev").onchange=e=>{evdate=e.target.value.trim();rWrite()};
   $$("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);rWrite()});
   $$("[data-v]").forEach(d=>d.onclick=()=>show(d.dataset.v));
   $("#clr").onclick=()=>{sel=[];sync()};
-  $("#up").onclick=confirmUp;drawGauge();
+  $("#up").onclick=confirmUp;if($("#stop"))$("#stop").onclick=cancelRun;drawGauge();
 }
 let prog=null;
+async function cancelRun(){
+  if(!prog)return;if(prog.kind==='up'&&!confirm_("업로드를 취소하면 글이 올라가다 멈출 수 있습니다. 취소할까요?"))return;
+  prog.cancel=true;setStatus("취소하는 중…");
+  if(prog.runId&&!prog.sent){prog.sent=true;try{await gh(`/repos/${REPO}/actions/runs/${prog.runId}/cancel`,{method:"POST"})}catch(e){setStatus("취소 실패: "+e.message)}}
+}
+const confirm_=m=>confirm(m);
 function gaugeHtml(kind){
   if(!prog||prog.kind!==kind)return "";
   const e=(Date.now()-prog.t0)/1000,p=Math.min(.97,Math.max(e/prog.exp,prog.step*.95)),rem=Math.max(0,prog.exp-e);
@@ -255,6 +270,7 @@ async function waitRun(wf,after,label){
     const r=await(await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?event=workflow_dispatch&per_page=3`)).json();
     const run=r.workflow_runs.find(x=>new Date(x.created_at).getTime()>=after-5000);
     if(run){
+      if(prog){prog.runId=run.id;if(prog.cancel&&!prog.sent){prog.sent=true;try{await gh(`/repos/${REPO}/actions/runs/${run.id}/cancel`,{method:"POST"})}catch(e){}}}
       try{const j=await(await gh(`/repos/${REPO}/actions/runs/${run.id}/jobs`)).json(),st=(j.jobs?.[0]?.steps)||[];if(st.length&&prog)prog.step=st.filter(x=>x.status==="completed").length/st.length}catch(e){}
       drawGauge();
       if(run.status==="completed")return run.conclusion}
@@ -263,14 +279,15 @@ async function waitRun(wf,after,label){
 }
 async function doScan(){
   if(busy)return;
-  if(!/^\d{4}\.\d{2}\.\d{2}$/.test(since)){setStatus("스캔 날짜는 YYYY.MM.DD 형식이어야 합니다");return}
-  busy=true;prog={kind:"scan",label:"스캔 중",t0:Date.now(),exp:+LS.get("dScan")||1200,step:0};rList();setStatus("스캔을 요청했습니다");drawGauge();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sinceISO)){setStatus("스캔 날짜를 선택해 주세요");return}
+  const since=sinceISO.replace(/-/g,".");
+  busy=true;prog={kind:"scan",label:"스캔 중",t0:Date.now(),exp:Math.round(90+(maxposts||Math.min(pages*15,95))*(+LS.get("dPer")||12)),step:0};rList();setStatus("스캔을 요청했습니다");drawGauge();
   try{const t0=Date.now(),k=KW(),j=a=>(a||[]).join(",");
-    const inputs={since};if(kw)Object.assign(inputs,{include:j(k.include),exclude:j(k.exclude),other:j(k.other),bait:j(k.bait)});
+    const inputs={since,pages:String(pages),maxposts:String(maxposts)};if(kw)Object.assign(inputs,{include:j(k.include),exclude:j(k.exclude),other:j(k.other),bait:j(k.bait)});
     await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs})});
     const c=await waitRun("review-scan.yml",t0,"스캔");
-    if(c==="success")LS.set("dScan",String(Math.round((Date.now()-t0)/1000)));
-    if(c!=="success"){status="스캔 실패 ("+c+")";busy=false;prog=null;rList();return}
+    if(c==="success"){const n=maxposts||Math.min(pages*15,95);LS.set("dPer",String(Math.max(3,((Date.now()-t0)/1000-90)/n).toFixed(1)))}
+    if(c!=="success"){status=c==="cancelled"?"스캔을 취소했습니다":"스캔 실패 ("+c+")";busy=false;prog=null;rList();return}
     await load();status="스캔 완료"
   }catch(e){status="오류: "+e.message}
   busy=false;prog=null;build();
@@ -284,7 +301,7 @@ async function doUpload(){
     await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
     const c=await waitRun("post-topic.yml",t0,"업로드");
     if(c==="success")LS.set("dUp",String(Math.round((Date.now()-t0)/1000)));
-    status=c==="success"?"업로드 완료":"업로드 실패 ("+c+")";
+    status=c==="success"?"업로드 완료":c==="cancelled"?"업로드를 취소했습니다":"업로드 실패 ("+c+")";
     if(c==="success")sel=[];
   }catch(e){status="오류: "+e.message}
   busy=false;prog=null;sync();setStatus(status);

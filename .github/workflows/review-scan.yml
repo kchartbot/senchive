@@ -5,6 +5,12 @@ on:
       since:
         description: "이 날짜부터 (YYYY.MM.DD, 비우면 오늘)"
         default: ""
+      pages:
+        description: "훑을 목록 페이지 수 (기본 12)"
+        default: "12"
+      maxposts:
+        description: "읽을 글 최대 개수 (0이면 제한 없음)"
+        default: "0"
       include:
         description: "포함 키워드(쉼표, 비우면 기본값)"
         default: ""
@@ -33,10 +39,14 @@ jobs:
           B: ${{ inputs.exclude }}
           C: ${{ inputs.other }}
           D: ${{ inputs.bait }}
+          N1: ${{ inputs.pages }}
+          N2: ${{ inputs.maxposts }}
         run: |
           python3 - <<'PY'
           import os, re, sys
           if os.environ["S"] and not re.fullmatch(r"\d{4}\.\d{2}\.\d{2}", os.environ["S"]): sys.exit("잘못된 날짜")
+          for k in ("N1", "N2"):
+              if not re.fullmatch(r"\d{1,3}", os.environ[k]): sys.exit("잘못된 숫자: " + k)
           for k in "ABCD":
               v = os.environ[k]
               if len(v) > 1200 or re.search(r"[\"'`$\\<>|;&\n\r]", v): sys.exit("잘못된 키워드: " + k)
@@ -50,6 +60,8 @@ jobs:
           pip install requests beautifulsoup4 pillow
       - env:
           SINCE: ${{ inputs.since }}
+          MAXP: ${{ inputs.pages }}
+          MAXPOSTS: ${{ inputs.maxposts }}
           KW_INCLUDE: ${{ inputs.include }}
           KW_EXCLUDE: ${{ inputs.exclude }}
           KW_OTHER: ${{ inputs.other }}

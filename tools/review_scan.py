@@ -10,6 +10,7 @@ import dc_digest as d
 KST = d.KST
 SINCE = os.environ.get("SINCE") or datetime.now(KST).strftime("%Y.%m.%d")
 MAXP = int(os.environ.get("MAXP", "12"))
+MAXPOSTS = int(os.environ.get("MAXPOSTS", "0"))   # 0 = 제한 없음
 MAXFILES = int(os.environ.get("MAXFILES", "40"))
 d.GALL, d.KIND, d.HEAD = "kpopcontent", "mgallery", ""
 def kw(env, default):
@@ -63,8 +64,11 @@ def frame_thumb(src, name, headers=""):
 def main():
     rs = rows(); posts = []
     print("개념글", len(rs))
+    read = 0
     for r in rs:
+        if MAXPOSTS and read >= MAXPOSTS: print("글 수 제한에 도달", MAXPOSTS); break
         if OUT_KW.search(r["title"]) or any(k in r["title"] for k in OTHER): continue
+        read += 1
         try: p = d.post(r["no"])
         except SystemExit: raise
         except Exception as e: print("글 실패", r["no"], str(e)[:60]); continue
