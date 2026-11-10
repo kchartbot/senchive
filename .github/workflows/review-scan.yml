@@ -26,6 +26,9 @@ on:
       recommend:
         description: "개념글만 (true/false)"
         default: "true"
+      incremental:
+        description: "지난 결과 재사용, 새 글만 읽기 (true/false)"
+        default: "true"
       headoff:
         description: "건너뛸 말머리(쉼표)"
         default: ""
@@ -48,6 +51,7 @@ jobs:
           N1: ${{ inputs.pages }}
           N2: ${{ inputs.maxposts }}
           R: ${{ inputs.recommend }}
+          I2: ${{ inputs.incremental }}
           H: ${{ inputs.headoff }}
         run: |
           python3 - <<'PY'
@@ -55,12 +59,19 @@ jobs:
           if os.environ["S"] and not re.fullmatch(r"\d{4}\.\d{2}\.\d{2}", os.environ["S"]): sys.exit("잘못된 날짜")
           for k in ("N1", "N2"):
               if not re.fullmatch(r"\d{1,3}", os.environ[k]): sys.exit("잘못된 숫자: " + k)
-          if os.environ["R"] not in ("true", "false"): sys.exit("잘못된 개념글 값")
+          if os.environ["R"] not in ("true", "false") or os.environ["I2"] not in ("true", "false"): sys.exit("잘못된 개념글 값")
           for k in "ABCDH":
               v = os.environ[k]
               if len(v) > 1200 or re.search(r"[\"'`$\\<>|;&\n\r]", v): sys.exit("잘못된 키워드: " + k)
           PY
       - uses: actions/checkout@v4
+      - name: 이전 결과 가져오기
+        if: inputs.incremental == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git clone -q --depth 1 -b review-scan "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" out/review || echo "이전 결과 없음"
+          rm -rf out/review/.git
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -76,6 +87,7 @@ jobs:
           KW_OTHER: ${{ inputs.other }}
           KW_BAIT: ${{ inputs.bait }}
           RECOMMEND: ${{ inputs.recommend }}
+          INCREMENTAL: ${{ inputs.incremental }}
           HEAD_OFF: ${{ inputs.headoff }}
           DELAY: "0.8"
         run: python tools/review_scan.py

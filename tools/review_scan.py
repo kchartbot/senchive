@@ -16,6 +16,26 @@ RECOMMEND = os.environ.get("RECOMMEND", "true").lower() != "false"   # false 면
 def nh(h): return (h or "").replace("\ufe0f", "").replace(" ", "").strip() or "(없음)"   # 이모지 변형문자·공백 차이를 무시
 HEAD_OFF = {nh(h) for h in os.environ.get("HEAD_OFF", "").split(",") if h.strip()}   # 건너뛸 말머리
 d.GALL, d.KIND, d.HEAD = "kpopcontent", "mgallery", ""
+INCREMENTAL = os.environ.get("INCREMENTAL", "false").lower() == "true"   # 지난 결과를 재사용하고 새 글만 읽는다
+
+
+def retry(fn, *a, tries=3, **k):
+    """일시적인 네트워크 오류면 간격을 늘려 다시 시도한다 (차단 감지로 인한 종료는 그대로 전달)."""
+    for i in range(tries):
+        try: return fn(*a, **k)
+        except SystemExit: raise
+        except Exception:
+            if i == tries - 1: raise
+            time.sleep(3 * (i + 1))
+
+
+def fetch(u, ref, timeout):
+    r = d.S.get(u, headers={"Referer": ref}, timeout=timeout)
+    if r.status_code >= 500: raise RuntimeError(f"HTTP {r.status_code}")
+    time.sleep(d.DELAY)
+    return r
+
+
 def kw(env, default):
     v = os.environ.get(env, "").strip()
     return [k.strip() for k in (v or default).split(",") if k.strip()]
@@ -32,7 +52,7 @@ def rows():
     res = []
     for p in range(1, MAXP + 1):
         url = f"{d.BASE}/mgallery/board/lists/?id=kpopcontent&sort_type=N&page={p}" + ("&exception_mode=recommend" if RECOMMEND else "")
-        soup = BeautifulSoup(d.get(url).text, "html.parser"); page = []
+        soup = BeautifulSoup(retry(d.get, url).text, "html.parser"); page = []
         for tr in soup.select("tr.ub-content"):
             no = tr.get("data-no"); a = tr.select_one("td.gall_tit a")
             if not (no and no.isdigit() and a): continue
@@ -67,20 +87,33 @@ def frame_thumb(src, name, headers=""):
 def main():
     rs = rows(); posts = []
     heads = {}
+    prev = {}
+    if INCREMENTAL and (out / "index.json").exists():
+        try: prev = json.loads((out / "index.json").read_text(encoding="utf-8"))
+        except Exception: prev = {}
+    prev_posts = {int(p["no"]): p for p in prev.get("posts", [])}
+    sig = ",".join(sorted(INC_L)) + f"|{MAXFILES}"
+    skip = set(prev.get("skip", [])) if prev.get("sig") == sig else set()   # 포함 키워드가 바뀌면 "해당 없음" 기록은 버린다
+    new_skip = set(); stat = dict(read=0, reused=0, skipped=0)
     for r in rs: heads[nh(r["head"])] = heads.get(nh(r["head"]), 0) + 1
     print("개념글", len(rs))
     read = 0
     for r in rs:
-        if MAXPOSTS and read >= MAXPOSTS: print("글 수 제한에 도달", MAXPOSTS); break
         if nh(r["head"]) in HEAD_OFF: continue
         if OUT_KW.search(r["title"]) or any(k in r["title"] for k in OTHER): continue
+        if r["no"] in prev_posts:
+            p0 = prev_posts[r["no"]]
+            p0.update(bait=any(k in r["title"] for k in BAIT), when=r["when"], head=r["head"], rec=r["rec"], views=r["views"])
+            posts.append(p0); stat["reused"] += 1; continue
+        if r["no"] in skip: new_skip.add(r["no"]); stat["skipped"] += 1; continue
+        if MAXPOSTS and read >= MAXPOSTS: continue
         read += 1
-        try: p = d.post(r["no"])
+        try: p = retry(d.post, r["no"])
         except SystemExit: raise
         except Exception as e: print("글 실패", r["no"], str(e)[:60]); continue
-        if p.get("error"): continue
+        if p.get("error"): new_skip.add(r["no"]); continue
         blob = (r["title"] + " " + p.get("text", "")).lower()
-        if not any(g in blob for g in GROUP): continue
+        if not any(g in blob for g in GROUP): new_skip.add(r["no"]); continue
         files = []
         vlist = []
         for u0 in p.get("videos", []):
@@ -94,7 +127,7 @@ def main():
         for i, u in enumerate(vlist):
             name = f"{p['no']}_v{i}"
             try:
-                b = d.S.get(u, headers={"Referer": p["url"]}, timeout=40); time.sleep(d.DELAY)
+                b = retry(fetch, u, p["url"], 40)
                 if not (b.ok and b.content[4:8] == b"ftyp" and len(b.content) <= 12_000_000): continue
                 tmp = out / f"{name}.mp4"; tmp.write_bytes(b.content)
                 ok = frame_thumb(tmp, name)
@@ -107,7 +140,7 @@ def main():
         for i, u in enumerate(p.get("images", [])[:MAXFILES]):
             name = f"{p['no']}_{i}"
             try:
-                b = d.S.get(u, headers={"Referer": p["url"]}, timeout=30); time.sleep(d.DELAY); h = b.content[:12]
+                b = retry(fetch, u, p["url"], 30); h = b.content[:12]
                 ext = "gif" if h[:3] == b"GIF" else "png" if h[:4] == b"\x89PNG" else "jpg" if h[:3] == b"\xff\xd8\xff" else "webp" if h[:4] == b"RIFF" else None
                 if not (b.ok and ext and len(b.content) <= 8_000_000): continue
                 im = Image.open(io.BytesIO(b.content)); thumb(im, name)
@@ -118,11 +151,17 @@ def main():
                 files.append(f)
             except SystemExit: raise
             except Exception as e: print("이미지 실패", name, str(e)[:60])
-        if not files and not p.get("links"): continue
+        if not files and not p.get("links"): new_skip.add(r["no"]); continue
+        stat["read"] += 1
         posts.append(dict(no=p["no"], bait=any(k in r["title"] for k in BAIT), title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
         print("글", p["no"], p["title"][:30], len(files))
     posts.sort(key=lambda x: x["when"], reverse=True)
-    (out / "index.json").write_text(json.dumps(dict(kw=dict(include=INC_L, exclude=EXC_L, other=OTHER, bait=BAIT), heads=heads, recommend=RECOMMEND, generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
+    keep = {f["id"] for x in posts for f in x["files"]}
+    for f in list((out / "t").glob("*")) + list((out / "m").glob("*")):
+        if f.stem not in keep: f.unlink()   # 더 이상 쓰지 않는 미리보기 정리
+    skip_all = sorted(skip | new_skip, reverse=True)[:6000]
+    print(f"새로 읽음 {stat['read']} · 재사용 {stat['reused']} · 건너뜀 {stat['skipped']}")
+    (out / "index.json").write_text(json.dumps(dict(kw=dict(include=INC_L, exclude=EXC_L, other=OTHER, bait=BAIT), heads=heads, recommend=RECOMMEND, skip=skip_all, sig=sig, stat=stat, generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
     print("저장", len(posts), "글")
 
 

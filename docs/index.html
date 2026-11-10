@@ -41,6 +41,7 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .chip button{color:var(--mute);width:16px;height:16px;line-height:1}
 .chip button:hover{color:var(--fg)}
 .chip.hc{padding:2px 8px;cursor:pointer}.chip.hc.off{opacity:.4;text-decoration:line-through}
+.tpl{display:flex;gap:4px;margin:4px 0 6px}.tpl select{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 6px}
 .add{display:flex;gap:4px;margin-top:8px}
 .add input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 8px}
 .add button,.mini{background:var(--s2);border-radius:3px;padding:5px 10px;font-size:12px}
@@ -140,7 +141,7 @@ const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s),okUrl=s=>/^https?:\/\/[^\s"'<>`]
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const DEF={include:"리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈".split(","),exclude:"버블,디콘,dccon,밈".split(","),other:"베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈".split(","),bait:"비하인드,떴다,떳다".split(",")};
 const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 수집)",exclude:"제외 키워드 (제목에 있으면 건너뜀)",other:"다른 그룹 (제목에 있으면 건너뜀)",bait:"떡밥 키워드 (★ 표시)"};
-let rec=LS.get("rec")!=="0",hOff=new Set((()=>{try{return JSON.parse(LS.get("hoff"))||[]}catch(e){return[]}})()),hKnown=(()=>{try{const x=JSON.parse(LS.get("hk"));if(x&&Object.keys(x).length)return x}catch(e){}return{"⭐베스트":0,"일반":0,"📷📺":0,"👍📰":0,"🎬컨텐츠":0}})();
+let inc=LS.get("inc")!=="0",tplCur=LS.get("tplc")||"",rec=LS.get("rec")!=="0",hOff=new Set((()=>{try{return JSON.parse(LS.get("hoff"))||[]}catch(e){return[]}})()),hKnown=(()=>{try{const x=JSON.parse(LS.get("hk"));if(x&&Object.keys(x).length)return x}catch(e){}return{"⭐베스트":0,"일반":0,"📷📺":0,"👍📰":0,"🎬컨텐츠":0}})();
 const nh=h=>String(h||"").replace(/\uFE0F/g,"").replace(/[\s,"'`$\\<>|;&]/g,"").slice(0,20);
 let ltab=LS.get("ltab")==="hist"?"hist":"kw",srv=null,token="",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
 let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
@@ -151,6 +152,17 @@ const fmtT=t=>{const d=new Date(t);return isNaN(d)?"":d.toLocaleString("ko-KR",{
 const RES={success:["완료","ok"],cancelled:["취소","ng"],failure:["실패","ng"],timeout:["시간 초과","ng"]};
 const ltabs=()=>`<div class="tabs"><button data-lt="kw" class="${ltab==="kw"?"on":""}">키워드</button><button data-lt="hist" class="${ltab==="hist"?"on":""}">업로드 기록</button></div>`;
 const bindTabs=()=>$$("[data-lt]").forEach(b=>b.onclick=()=>{ltab=b.dataset.lt;LS.set("ltab",ltab);rKw()});
+const TPL=()=>{try{const x=JSON.parse(LS.get("tpl"));return Array.isArray(x)?x.filter(t=>t&&typeof t.name==="string"):[]}catch(e){return[]}};
+const tplName=v=>String(v||"").replace(/[<>"'`]/g,"").trim().slice(0,20);
+const DEFTPL={name:"기본값",kw:null,hOff:[],rec:true,pages:12,maxposts:0,inc:true};
+function tplSnap(name){return{name,kw:JSON.parse(JSON.stringify(KW())),hOff:[...hOff],rec,pages,maxposts,inc}}
+function tplApply(t){
+  kw=t.kw?JSON.parse(JSON.stringify(t.kw)):null;kw?LS.set("kw",JSON.stringify(kw)):LS.del("kw");
+  hOff=new Set((t.hOff||[]).map(String));LS.set("hoff",JSON.stringify([...hOff]));
+  rec=t.rec!==false;LS.set("rec",rec?"1":"0");inc=t.inc!==false;LS.set("inc",inc?"1":"0");
+  pages=Math.max(1,Math.min(30,+t.pages||12));LS.set("pg",pages);maxposts=Math.max(0,Math.min(300,+t.maxposts||0));LS.set("mp",maxposts);
+  for(const n of(t.hOff||[]))if(!(n in hKnown))hKnown[n]=0;
+}
 const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 let sinceISO=kstDay(),evdate=kstDay(),topic="",pages=+LS.get("pg")||12,maxposts=+LS.get("mp")||0;
 const KW=()=>kw||(idx&&idx.kw)||DEF;
@@ -178,7 +190,8 @@ function clean(x){
     files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img",o:/^(gif|webp|mp4)$/.test(f.o)?f.o:""})).slice(0,80)})).filter(p=>p.no);
   const k=x?.kw,cl=a=>(Array.isArray(a)?a:[]).map(v=>String(v).slice(0,40)).slice(0,300);
   const hd={};if(x?.heads&&typeof x.heads==="object")for(const[n,v]of Object.entries(x.heads).slice(0,60)){const nm=String(n).replace(/[,"'`$\\<>|;&\n\r]/g,"").slice(0,20);if(nm)hd[nm]=+v||0}
-  return {heads:hd,recommend:x?.recommend!==false,generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),posts,kw:k?{include:cl(k.include),exclude:cl(k.exclude),other:cl(k.other),bait:cl(k.bait)}:null};
+  const st=x?.stat||{};
+  return {stat:{read:+st.read||0,reused:+st.reused||0,skipped:+st.skipped||0},heads:hd,recommend:x?.recommend!==false,generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),posts,kw:k?{include:cl(k.include),exclude:cl(k.exclude),other:cl(k.other),bait:cl(k.bait)}:null};
 }
 
 /* ---------- 화면 ---------- */
@@ -195,7 +208,8 @@ function build(){
 function rKw(){
   if(ltab==="hist")return rHist();
   const k=KW();
-  $("#pKw").innerHTML=ltabs()+`<div class="pad"><div class="sub" style="padding:8px 0 2px">스캔할 때 적용됩니다 · 이 기기에 저장</div>`+
+  $("#pKw").innerHTML=ltabs()+`<div class="pad"><div class="sub" style="padding:8px 0 2px">스캔할 때 적용됩니다 · 이 기기에 저장</div>
+   <div class="tpl"><select id="tsel"><option value="">템플릿 선택…</option><option value="__def__" ${tplCur==="__def__"?"selected":""}>기본값 (처음 설정)</option>${TPL().map(t=>`<option value="${esc(t.name)}" ${t.name===tplCur?"selected":""}>${esc(t.name)}</option>`).join("")}</select><button class="mini" id="tsave">현재 설정 저장</button><button class="mini" id="tdel">삭제</button></div>`+
    Object.keys(KWN).map(n=>`<details class="kd" data-k="${n}" ${LS.get("kwopen_"+n)==="1"?"open":""}><summary>${KWN[n].split(" (")[0]} <span class="kc">${(k[n]||[]).length}</span></summary><div class="sub" style="margin:2px 0 6px">${KWN[n].includes("(")?KWN[n].slice(KWN[n].indexOf("(")):""}</div><div class="chips">${(k[n]||[]).map((w,i)=>`<span class="chip">${esc(w)}<button data-del="${n}:${i}" aria-label="삭제">×</button></span>`).join("")}</div>
    <div class="add"><input data-in="${n}" placeholder="추가" maxlength="40"><button data-add="${n}">추가</button></div></details>`).join("")+
    `<details class="kd" id="hdet" ${LS.get("kwopen_head")==="1"?"open":""}><summary>말머리 <span class="kc">${Object.keys(hKnown).length-[...hOff].filter(n=>n in hKnown).length}/${Object.keys(hKnown).length}</span></summary><div class="sub" style="margin:2px 0 6px">${Object.keys(hKnown).length?"켜진 말머리만 스캔합니다 (끄면 건너뜀)":""}</div><div class="add"><input id="hin" placeholder="말머리 추가" maxlength="20"><button id="hadd">추가</button></div><div class="chips" style="margin-top:8px">${Object.keys(hKnown).map(n=>`<button class="chip hc ${hOff.has(n)?"off":""}" data-hd="${esc(n)}">${esc(n)} <span class="sub">${hKnown[n]||""}</span></button>`).join("")}</div></details>`+
@@ -205,6 +219,13 @@ function rKw(){
   $("#hdet").addEventListener("toggle",e=>LS.set("kwopen_head",e.target.open?"1":"0"));
   $$("[data-hd]").forEach(b=>b.onclick=()=>{const n=b.dataset.hd;hOff.has(n)?hOff.delete(n):hOff.add(n);LS.set("hoff",JSON.stringify([...hOff]));rKw()});
   bindTabs();
+  $("#tsel").onchange=e=>{const v=e.target.value;if(!v)return;
+    const t=v==="__def__"?DEFTPL:TPL().find(x=>x.name===v);if(!t)return;
+    tplCur=v;LS.set("tplc",v);tplApply(t);rKw();rList();setStatus("템플릿을 적용했습니다: "+t.name)};
+  $("#tsave").onclick=()=>{const cur=tplCur&&tplCur!=="__def__"?tplCur:"";const n=tplName(prompt("템플릿 이름 (같은 이름이면 덮어씁니다)",cur));if(!n)return;
+    const L=TPL().filter(x=>x.name!==n);L.push(tplSnap(n));LS.set("tpl",JSON.stringify(L.slice(-30)));tplCur=n;LS.set("tplc",n);rKw()};
+  $("#tdel").onclick=()=>{if(!tplCur||tplCur==="__def__")return;if(!confirm(`"${tplCur}" 템플릿을 삭제할까요?`))return;
+    LS.set("tpl",JSON.stringify(TPL().filter(x=>x.name!==tplCur)));tplCur="";LS.del("tplc");rKw()};
   $$(".kd").forEach(d=>d.addEventListener("toggle",()=>LS.set("kwopen_"+d.dataset.k,d.open?"1":"0")));
   const save=()=>{LS.set("kw",JSON.stringify(kw));rKw()};
   const cur_=()=>kw||(kw=JSON.parse(JSON.stringify(KW())));
@@ -239,7 +260,7 @@ function rList(){
   P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" class="sub" style="text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
    <div class="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div>
    <div class="scanrow"><input class="date" type="date" id="since" value="${esc(sinceISO)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button>${prog&&prog.kind==="scan"?'<button class="stop" id="stop">취소</button>':""}</div>
-   <div class="opts"><label><input type="checkbox" id="rec" ${rec?"checked":""} style="width:auto"> 개념글만</label><label>페이지 <input type="number" id="pg" min="1" max="30" value="${pages}"></label><label>글 최대 <input type="number" id="mp" min="0" max="300" value="${maxposts}" title="0이면 제한 없음"></label>
+   <div class="opts"><label><input type="checkbox" id="rec" ${rec?"checked":""} style="width:auto"> 개념글만</label><label title="지난 결과를 재사용하고 새 글만 읽습니다"><input type="checkbox" id="inc" ${inc?"checked":""} style="width:auto"> 새 글만 읽기</label><label>페이지 <input type="number" id="pg" min="1" max="30" value="${pages}"></label><label>글 최대 <input type="number" id="mp" min="0" max="300" value="${maxposts}" title="0이면 제한 없음"></label>
      <button class="mini" data-pre="3,20">빠르게</button><button class="mini" data-pre="6,40">보통</button><button class="mini" data-pre="12,0">전체</button></div>
    <div class="sub" id="st" style="margin-top:6px">${esc(status)}</div><div id="gS"></div></div>`+
    (idx&&idx.posts.length?idx.posts.map(p=>`<div class="post" data-no="${p.no}"><div class="pt"><div><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="tag bait">떡밥</span>':""}${dN.has(p.no)?'<span class="tag done">업로드함</span>':""}${esc(p.title)}</a><div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel"></span></div>
@@ -248,6 +269,7 @@ function rList(){
     ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
   $("#logout").onclick=()=>{LS.del("tk");LS.del("tke");token="";idx=null;start()};
   $("#since").onchange=e=>{sinceISO=e.target.value};
+  $("#inc").onchange=e=>{inc=e.target.checked;LS.set("inc",inc?"1":"0")};
   $("#rec").onchange=e=>{rec=e.target.checked;LS.set("rec",rec?"1":"0")};
   $("#pg").onchange=e=>{pages=Math.max(1,Math.min(30,+e.target.value||12));LS.set("pg",pages);e.target.value=pages};
   $("#mp").onchange=e=>{maxposts=Math.max(0,Math.min(300,+e.target.value||0));LS.set("mp",maxposts);e.target.value=maxposts};
@@ -337,14 +359,15 @@ async function doScan(){
   if(busy)return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(sinceISO)){setStatus("스캔 날짜를 선택해 주세요");return}
   const since=sinceISO.replace(/-/g,".");
-  busy=true;prog={kind:"scan",label:"스캔 중",t0:Date.now(),exp:Math.round(90+(maxposts||Math.min(pages*15,95))*(+LS.get("dPer")||12)),step:0};rList();setStatus("스캔을 요청했습니다");drawGauge();
+  busy=true;prog={kind:"scan",label:"스캔 중",t0:Date.now(),exp:inc?(+LS.get("dInc")||150):Math.round(90+(maxposts||Math.min(pages*15,95))*(+LS.get("dPer")||12)),step:0};rList();setStatus("스캔을 요청했습니다");drawGauge();
   try{const t0=Date.now(),k=KW(),j=a=>(a||[]).join(",");
-    const inputs={since,pages:String(pages),maxposts:String(maxposts),recommend:rec?"true":"false"};const off=[...hOff].filter(n=>n in hKnown);if(off.length)inputs.headoff=off.join(",");if(kw)Object.assign(inputs,{include:j(k.include),exclude:j(k.exclude),other:j(k.other),bait:j(k.bait)});
+    const inputs={since,pages:String(pages),maxposts:String(maxposts),recommend:rec?"true":"false",incremental:inc?"true":"false"};const off=[...hOff].filter(n=>n in hKnown);if(off.length)inputs.headoff=off.join(",");if(kw)Object.assign(inputs,{include:j(k.include),exclude:j(k.exclude),other:j(k.other),bait:j(k.bait)});
     await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs})});
     const c=await waitRun("review-scan.yml",t0,"스캔");
-    if(c==="success"){const n=maxposts||Math.min(pages*15,95);LS.set("dPer",String(Math.max(3,((Date.now()-t0)/1000-90)/n).toFixed(1)))}
+    if(c==="success"&&inc)LS.set("dInc",String(Math.round((Date.now()-t0)/1000)));
+    else if(c==="success"){const n=maxposts||Math.min(pages*15,95);LS.set("dPer",String(Math.max(3,((Date.now()-t0)/1000-90)/n).toFixed(1)))}
     if(c!=="success"){status=c==="cancelled"?"스캔을 취소했습니다":"스캔 실패 ("+c+")";busy=false;prog=null;rList();return}
-    await load();status="스캔 완료"
+    await load();status=`스캔 완료 · 새로 읽은 글 ${idx.stat.read}개 · 재사용 ${idx.stat.reused}개`
   }catch(e){status="오류: "+e.message}
   busy=false;prog=null;build();
 }
