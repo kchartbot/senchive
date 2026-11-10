@@ -43,8 +43,9 @@ if _ex:
     if len(files) != _n: print("제외한 파일(밈/캡처 등):", _n - len(files))
 files = files[:MAXN]
 body = "\n".join(links)
-if not links: d["title"] = d["title"].replace("링크+", "")
-if links and not files: d["title"] = d["title"].replace("링크+짤 모음", "링크 모음")   # 짤이 없으면 짤 문구 제거
+if os.environ.get("RAW_TITLE"): d["title"] = event   # 제목은 입력한 그대로 쓴다
+elif not links: d["title"] = d["title"].replace("링크+", "")
+if links and not files and not os.environ.get("RAW_TITLE"): d["title"] = d["title"].replace("링크+짤 모음", "링크 모음")   # 짤이 없으면 짤 문구 제거
 if not links and not files: sys.exit("링크도 짤도 없어 올리지 않음")
 print("제목:", d["title"], "| 링크", links, "| 파일", len(files), [f.name for f in files])
 if os.environ.get("DRY_RUN", "true").lower() != "false":
