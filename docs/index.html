@@ -120,6 +120,10 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .setup .go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:3px;padding:10px}
 /* 기록 */
 .hi{padding:10px 14px;border-bottom:1px solid var(--line)}
+.hi summary{cursor:pointer;list-style:none}.hi summary::-webkit-details-marker{display:none}.hi summary:hover b{text-decoration:underline}
+.hd2{margin-top:8px;padding:8px;background:var(--bg);border-radius:3px;display:grid;gap:2px}
+.hp{overflow-wrap:anywhere;font-size:12px}.hp a{color:var(--acc);text-decoration:none}.hp a:hover{text-decoration:underline}
+.hth{display:flex;flex-wrap:wrap;gap:3px}.hth img{width:48px;height:48px;object-fit:cover;border-radius:2px;background:var(--s2)}
 .hi b{display:block;font-weight:700;overflow-wrap:anywhere}
 .hi .pm{margin-top:2px}
 .ok{color:var(--ok)}.ng{color:var(--bad)}
@@ -209,7 +213,11 @@ async function loadSrv(){
 function rHist(){
   const H=HIST().slice().reverse();
   $("#pKw").innerHTML=ltabs()+`<div class="hs">이 기기에서 올린 글 ${H.length}건</div>`+
-   (H.length?H.map(h=>{const r=RES[h.res]||[h.res,"ng"];return `<div class="hi"><b>${esc(h.title)}</b><div class="pm">${esc(fmtT(h.t))} · <span class="${r[1]}">${esc(r[0])}</span> · 사진 ${h.i||0} · 움짤 ${h.c||0} · 링크 ${h.l||0} · 원글 ${(h.nos||[]).length}개</div></div>`}).join(""):'<div class="empty" style="padding:24px 14px">아직 기록이 없습니다</div>')+
+   (H.length?H.map(h=>{const r=RES[h.res]||[h.res,"ng"];
+     const ps=(h.posts||[]).map(x=>`<div class="hp"><a href="${esc(/^https:\/\/gall\.dcinside\.com\//.test(x.url||"")?x.url:"#")}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></div>`).join("")||`<div class="sub">원글 번호: ${esc((h.nos||[]).join(", "))}</div>`;
+     const th=(h.ids||[]).filter(okId).map(id=>`<img loading="lazy" src="${RAW}/t/${id}.jpg" alt="" onerror="this.remove()">`).join("");
+     const lk=(h.links||[]).filter(okUrl).map(u=>`<div class="hp"><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a></div>`).join("");
+     return `<details class="hi"><summary><b>${esc(h.title)}</b><div class="pm">${esc(fmtT(h.t))} · <span class="${r[1]}">${esc(r[0])}</span> · 사진 ${h.i||0} · 움짤 ${h.c||0} · 링크 ${h.l||0}</div></summary><div class="hd2"><div class="sub">가져온 원글</div>${ps}${lk?`<div class="sub" style="margin-top:6px">링크</div>${lk}`:""}${th?`<div class="sub" style="margin-top:6px">올린 사진·움짤</div><div class="hth">${th}</div>`:""}</div></details>`}).join(""):'<div class="empty" style="padding:24px 14px">아직 기록이 없습니다</div>')+
    `<div class="hs" style="margin-top:6px">GitHub 실행 기록 (모든 기기)</div>`+
    (srv===null?'<div class="empty" style="padding:16px 14px">불러오는 중…</div>':srv.length?srv.map(h=>{const r=RES[h.res]||[h.res,"sub"];return `<div class="hi"><b>${esc(h.title)}</b><div class="pm">${esc(fmtT(h.t))} · <span class="${r[1]}">${esc(r[0])}</span></div></div>`}).join(""):'<div class="empty" style="padding:16px 14px">기록 없음</div>')+
    `<div class="pad"><button class="mini" id="hclr">이 기기 기록 지우기</button></div>`;
@@ -335,7 +343,7 @@ async function doUpload(){
   if(!/^[^\/\\\n\r"`$]{1,50}$/.test(topic.trim())||topic.includes("..")){setStatus("주제에 쓸 수 없는 문자가 있거나 너무 깁니다");return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(evdate)){setStatus("행사 날짜는 YYYY-MM-DD 형식이어야 합니다");return}
   busy=true;prog={kind:"up",label:"업로드 중",t0:Date.now(),exp:+LS.get("dUp")||300,step:0};rWrite();setStatus("업로드를 요청했습니다");drawGauge();
-  try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))],snap={title:topic.trim(),nos,ids:ch.map(f=>f.id),c:k.c,i:k.i,l:chosenLinks().length};
+  try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))],snap={title:topic.trim(),nos,ids:ch.map(f=>f.id),posts:idx.posts.filter(p=>nos.includes(p.no)).map(p=>({no:p.no,title:p.title,url:p.url})),links:chosenLinks(),c:k.c,i:k.i,l:chosenLinks().length};
     await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
     const c=await waitRun("post-topic.yml",t0,"업로드");
     if(c==="success")LS.set("dUp",String(Math.round((Date.now()-t0)/1000)));
