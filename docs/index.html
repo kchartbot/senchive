@@ -26,7 +26,12 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .sub{font-size:12px;color:var(--mute)}
 .pad{padding:12px 14px}
 /* 키워드 */
-.kw h3{margin:16px 0 6px;font-size:12px;color:var(--mute);font-weight:500;letter-spacing:.03em}
+.kd{border-bottom:1px solid var(--line);padding:10px 0}
+.kd summary{cursor:pointer;font-size:13px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.kd summary::-webkit-details-marker{display:none}
+.kd summary::after{content:"▾";color:var(--mute);margin-left:6px}
+.kd[open] summary::after{content:"▴"}
+.kc{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute)}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
 .chip{display:inline-flex;align-items:center;gap:4px;background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 10px;font-size:12px}
 .chip button{color:var(--mute);width:18px;height:18px;border-radius:50%;line-height:1}
@@ -89,6 +94,7 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .w .reg:disabled{opacity:.4;cursor:default}
 .w .cx{background:#fff;color:#333;border:1px solid #ccc;padding:11px 22px;font-size:14px}
 .w .st{font-size:12px;color:#666;text-align:center;min-height:18px}
+.w .pv{font-size:11px;color:#888;margin-top:4px;overflow-wrap:anywhere}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
 .sheet>div{background:#fff;color:#222;width:100%;max-width:420px;padding:20px;display:grid;gap:12px;border-radius:4px}
 .sheet h2{margin:0;font-size:17px}.sheet p{margin:0;font-size:14px;overflow-wrap:anywhere}
@@ -111,7 +117,7 @@ const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 �
 let token=LS.get("tk")||"",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
 let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
 const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
-let since=kstDay().replace(/-/g,"."),evdate=kstDay(),topic=LS.get("topic")||"";
+let since=kstDay().replace(/-/g,"."),evdate=kstDay(),topic="";
 const KW=()=>kw||(idx&&idx.kw)||DEF;
 
 async function gh(path,opt={}){
@@ -152,9 +158,10 @@ function build(){
 function rKw(){
   const k=KW();
   $("#pKw").innerHTML=`<div class="hd"><h2>키워드</h2><div class="sub">스캔할 때 적용됩니다 · 이 기기에 저장</div></div><div class="pad">`+
-   Object.keys(KWN).map(n=>`<h3>${KWN[n]}</h3><div class="chips">${(k[n]||[]).map((w,i)=>`<span class="chip">${esc(w)}<button data-del="${n}:${i}" aria-label="삭제">×</button></span>`).join("")}</div>
-   <div class="add"><input data-in="${n}" placeholder="추가" maxlength="40"><button data-add="${n}">추가</button></div>`).join("")+
+   Object.keys(KWN).map(n=>`<details class="kd" data-k="${n}" ${LS.get("kwopen_"+n)==="1"?"open":""}><summary>${KWN[n].split(" (")[0]} <span class="kc">${(k[n]||[]).length}</span></summary><div class="sub" style="margin:2px 0 6px">${KWN[n].includes("(")?KWN[n].slice(KWN[n].indexOf("(")):""}</div><div class="chips">${(k[n]||[]).map((w,i)=>`<span class="chip">${esc(w)}<button data-del="${n}:${i}" aria-label="삭제">×</button></span>`).join("")}</div>
+   <div class="add"><input data-in="${n}" placeholder="추가" maxlength="40"><button data-add="${n}">추가</button></div></details>`).join("")+
    `<div style="margin-top:18px"><button class="mini" id="kwreset">기본값으로</button></div></div>`;
+  $$(".kd").forEach(d=>d.addEventListener("toggle",()=>LS.set("kwopen_"+d.dataset.k,d.open?"1":"0")));
   const save=()=>{LS.set("kw",JSON.stringify(kw));rKw()};
   const cur_=()=>kw||(kw=JSON.parse(JSON.stringify(KW())));
   $$("[data-del]").forEach(b=>b.onclick=()=>{const[n,i]=b.dataset.del.split(":");cur_()[n].splice(+i,1);save()});
@@ -195,6 +202,7 @@ function rView(){
   P.innerHTML=`<div class="view"><div class="stage"><img id="vimg" src="${mUrl(f)}" alt="${esc(f.id)}"></div>
    <button class="arrow l" id="pv" aria-label="이전">‹</button><button class="arrow r" id="nx" aria-label="다음">›</button>
    <div class="vbar"><div class="info">${i+1}/${L.length} · ${f.t==="clip"?"움짤":"사진"} · ${esc(f.ptitle)}</div><button class="vbtn ${on?"":"vsel"}" id="vt">${on?"선택 해제":"선택"}</button></div></div>`;
+  $("#vimg").onerror=function(){this.onerror=null;this.src=tUrl(f)};
   $("#vt").onclick=()=>toggle(f.id);
   $("#pv").onclick=()=>show(L[(i-1+L.length)%L.length].id);$("#nx").onclick=()=>show(L[(i+1)%L.length].id);
 }
@@ -203,7 +211,7 @@ addEventListener("keydown",e=>{if(/INPUT|SELECT/.test(document.activeElement?.ta
 function rWrite(){
   const P=$("#pWrite"),k=cnt(),tot=k.c+k.i,ch=chosen(),links=idx?[...new Set(idx.posts.filter(p=>new Set(ch.map(f=>f.no)).has(p.no)).flatMap(p=>p.links))]:[];
   P.innerHTML=`<div class="w"><div class="top">글쓰기</div><div class="box">
-   <div><label>제목</label><div class="ttl"><span>[${esc(evdate.replace(/-/g,""))}]</span><input id="topic" placeholder="주제 입력" value="${esc(topic)}" maxlength="50"><span>${links.filter(l=>!linkOff.has(l)).length&&tot?"링크+짤 모음":links.filter(l=>!linkOff.has(l)).length?"링크 모음":"짤 모음"}</span></div></div>
+   <div><label>제목</label><div class="ttl"><input id="topic" placeholder="제목을 입력하세요" value="${esc(topic)}" maxlength="50"></div><div class="pv" id="pvt">등록될 제목: ${esc(titleOf())}</div></div>
    <div><label>행사 날짜</label><input class="ev" id="ev" value="${esc(evdate)}"></div>
    <div><label>본문</label><div class="ed">
      ${links.map(l=>`<div class="lk"><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l)}</span></div>`).join("")}
@@ -212,7 +220,7 @@ function rWrite(){
    <div class="cn"><span>사진 <b class="${k.i>30?"over":""}">${k.i}</b>/30</span><span>움짤 <b class="${k.c>14?"over":""}">${k.c}</b>/14</span><span>합계 <b class="${tot>50?"over":""}">${tot}</b>/50</span></div>
    <div class="btns"><button class="reg" id="up" ${tot&&topic.trim()&&!busy&&idx?"":"disabled"}>등록</button><button class="cx" id="clr">선택 비우기</button></div>
    <div class="st">${esc(status)}</div></div></div>`;
-  $("#topic").oninput=e=>{topic=e.target.value;LS.set("topic",topic);$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
+  $("#topic").oninput=e=>{topic=e.target.value;$("#pvt").textContent="등록될 제목: "+titleOf();$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
   $("#topic").onchange=()=>rWrite();
   $("#ev").onchange=e=>{evdate=e.target.value.trim();rWrite()};
   $$("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);rWrite()});
