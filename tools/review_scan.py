@@ -12,10 +12,16 @@ SINCE = os.environ.get("SINCE") or datetime.now(KST).strftime("%Y.%m.%d")
 MAXP = int(os.environ.get("MAXP", "12"))
 MAXFILES = int(os.environ.get("MAXFILES", "40"))
 d.GALL, d.KIND, d.HEAD = "kpopcontent", "mgallery", ""
-GROUP = [k.lower() for k in "리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈".split(",")]
-OUT_KW = re.compile("버블|디콘|dccon|밈")
-OTHER = [k.strip() for k in os.environ.get("OTHER_GROUP", "베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈").split(",") if k.strip()]
-out = Path("out/review"); (out / "t").mkdir(parents=True, exist_ok=True)
+def kw(env, default):
+    v = os.environ.get(env, "").strip()
+    return [k.strip() for k in (v or default).split(",") if k.strip()]
+INC_L = kw("KW_INCLUDE", "리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈")
+EXC_L = kw("KW_EXCLUDE", "버블,디콘,dccon,밈")
+OTHER = kw("KW_OTHER", "베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈")
+BAIT = kw("KW_BAIT", "비하인드,떴다,떳다")
+GROUP = [k.lower() for k in INC_L]
+OUT_KW = re.compile("|".join(re.escape(k) for k in EXC_L) or "(?!)", re.I)
+out = Path("out/review"); (out / "t").mkdir(parents=True, exist_ok=True); (out / "m").mkdir(exist_ok=True)
 
 
 def rows():
@@ -38,7 +44,9 @@ def rows():
 
 
 def thumb(im, name):
-    im.seek(0); im = im.convert("RGB"); w, h = im.size; s = min(w, h)
+    im.seek(0); im = im.convert("RGB")
+    big = im.copy(); big.thumbnail((1000, 1000)); big.save(out / "m" / f"{name}.jpg", "JPEG", quality=80)   # 원본 보기용 큰 미리보기
+    w, h = im.size; s = min(w, h)
     im = im.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s)).resize((240, 240))
     im.save(out / "t" / f"{name}.jpg", "JPEG", quality=66)
 
@@ -91,14 +99,17 @@ def main():
                 if not (b.ok and ext and len(b.content) <= 8_000_000): continue
                 im = Image.open(io.BytesIO(b.content)); thumb(im, name)
                 anim = ext == "gif" or (ext == "webp" and b"ANIM" in b.content[:200])
-                files.append(dict(id=name, t="clip" if anim else "img"))
+                f = dict(id=name, t="clip" if anim else "img")
+                if anim and len(b.content) <= 3_000_000:
+                    (out / "m" / f"{name}.{ext}").write_bytes(b.content); f["o"] = ext   # 가벼운 움짤은 원본 그대로 보여 준다
+                files.append(f)
             except SystemExit: raise
             except Exception as e: print("이미지 실패", name, str(e)[:60])
         if not files and not p.get("links"): continue
-        posts.append(dict(no=p["no"], title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
+        posts.append(dict(no=p["no"], bait=any(k in r["title"] for k in BAIT), title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
         print("글", p["no"], p["title"][:30], len(files))
     posts.sort(key=lambda x: x["when"], reverse=True)
-    (out / "index.json").write_text(json.dumps(dict(generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
+    (out / "index.json").write_text(json.dumps(dict(kw=dict(include=INC_L, exclude=EXC_L, other=OTHER, bait=BAIT), generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
     print("저장", len(posts), "글")
 
 

@@ -5,6 +5,18 @@ on:
       since:
         description: "이 날짜부터 (YYYY.MM.DD, 비우면 오늘)"
         default: ""
+      include:
+        description: "포함 키워드(쉼표, 비우면 기본값)"
+        default: ""
+      exclude:
+        description: "제외 키워드(쉼표, 비우면 기본값)"
+        default: ""
+      other:
+        description: "다른 그룹 키워드(쉼표, 비우면 기본값)"
+        default: ""
+      bait:
+        description: "떡밥 키워드(쉼표, 비우면 기본값)"
+        default: ""
 permissions:
   contents: write
 concurrency:
@@ -17,8 +29,18 @@ jobs:
       - name: 입력 검사
         env:
           S: ${{ inputs.since }}
+          A: ${{ inputs.include }}
+          B: ${{ inputs.exclude }}
+          C: ${{ inputs.other }}
+          D: ${{ inputs.bait }}
         run: |
-          [[ -z "$S" || "$S" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]] || { echo "잘못된 날짜"; exit 1; }
+          python3 - <<'PY'
+          import os, re, sys
+          if os.environ["S"] and not re.fullmatch(r"\d{4}\.\d{2}\.\d{2}", os.environ["S"]): sys.exit("잘못된 날짜")
+          for k in "ABCD":
+              v = os.environ[k]
+              if len(v) > 1200 or re.search(r"[\"'`$\\<>|;&\n\r]", v): sys.exit("잘못된 키워드: " + k)
+          PY
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -28,6 +50,10 @@ jobs:
           pip install requests beautifulsoup4 pillow
       - env:
           SINCE: ${{ inputs.since }}
+          KW_INCLUDE: ${{ inputs.include }}
+          KW_EXCLUDE: ${{ inputs.exclude }}
+          KW_OTHER: ${{ inputs.other }}
+          KW_BAIT: ${{ inputs.bait }}
           DELAY: "0.8"
         run: python tools/review_scan.py
       - name: review-scan 브랜치에 저장

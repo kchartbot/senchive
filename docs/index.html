@@ -1,183 +1,284 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; connect-src https://api.github.com; base-uri 'none'; form-action 'none'"><title>센카이브 검수</title>
+<meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
+<title>센카이브 검수</title>
 <style>
-:root{--bg:#f4f3f1;--s1:#fff;--s2:#ecebe8;--fg:#18171a;--mute:#8a8780;--line:#e4e2de;--acc:#e0527a;--accfg:#fff;--ok:#2e9e6b;--warn:#c47a10;--shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0e0e10;--s1:#18181b;--s2:#232327;--fg:#f2f1f4;--mute:#85838c;--line:#26262b;--acc:#ff7a9c;--accfg:#1a0b10;--ok:#52d39a;--warn:#f0b050;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);color-scheme:dark}}
+:root{--bg:#f1f0ee;--s1:#fff;--s2:#ebeae7;--fg:#18171a;--mute:#86837c;--line:#e2e0db;--acc:#e0527a;--accfg:#fff;--warn:#c47a10;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0e0e10;--s1:#18181b;--s2:#232327;--fg:#f2f1f4;--mute:#85838c;--line:#27272c;--acc:#ff7a9c;--accfg:#1a0b10;--warn:#f0b050;color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Noto Sans KR",-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;padding:0 max(16px,env(safe-area-inset-left)) 170px max(16px,env(safe-area-inset-right));-webkit-font-smoothing:antialiased}
-.wrap{max-width:760px;margin:0 auto}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 "Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
-button:focus-visible,input:focus-visible,.ph:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-input{font:inherit;color:var(--fg)}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:22px 0 14px}
-.top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.03em}
-.sub{font-size:13px;color:var(--mute)}
-.scanrow{display:flex;gap:8px;align-items:center}
-.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;width:118px}
-.scan{background:var(--fg);color:var(--bg);border-radius:999px;padding:9px 20px;font-weight:500;font-size:14px;white-space:nowrap}
+input,select{font:inherit;color:var(--fg)}
+button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#app{height:100%;display:grid;grid-template-columns:230px minmax(300px,420px) minmax(0,1fr) 360px}
+.pane{min-height:0;min-width:0;overflow:auto;border-right:1px solid var(--line)}
+.pane:last-child{border-right:0}
+.nav{display:none}
+@media(max-width:1000px){
+ #app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 54px}
+ .pane{display:none;border-right:0}.pane.on{display:block}
+ .nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--s1);padding-bottom:env(safe-area-inset-bottom)}
+ .nav button{font-size:13px;color:var(--mute)}.nav button.on{color:var(--acc);font-weight:700}
+}
+.hd{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+.hd h2{margin:0;font-size:15px;letter-spacing:-.01em}
+.sub{font-size:12px;color:var(--mute)}
+.pad{padding:12px 14px}
+/* 키워드 */
+.kw h3{margin:16px 0 6px;font-size:12px;color:var(--mute);font-weight:500;letter-spacing:.03em}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 10px;font-size:12px}
+.chip button{color:var(--mute);width:18px;height:18px;border-radius:50%;line-height:1}
+.chip button:hover{background:var(--s2)}
+.add{display:flex;gap:6px;margin-top:8px}
+.add input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.add button,.mini{background:var(--s2);border-radius:8px;padding:6px 12px;font-size:12px}
+/* 목록 */
+.scanrow{display:flex;gap:6px;align-items:center;margin-top:8px}
+.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;width:108px}
+.scan{background:var(--fg);color:var(--bg);border-radius:999px;padding:7px 18px;font-weight:500;font-size:13px}
 .scan:disabled{opacity:.45;cursor:default}
-.post{background:var(--s1);border-radius:20px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
-.ph-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
-.ph-head a{color:var(--fg);text-decoration:none;font-weight:700;letter-spacing:-.02em;line-height:1.35}
-.meta{font-size:12px;color:var(--mute);margin-top:2px}
-.sel{font-size:12px;color:var(--acc);white-space:nowrap}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-@media(min-width:560px){.grid{grid-template-columns:repeat(5,1fr)}}
-.ph{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--s2) center/cover;cursor:pointer;transition:transform .12s}
-.ph:active{transform:scale(.96)}
-.ph .chk{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:50%;background:var(--acc);color:var(--accfg);display:none;place-items:center;font-size:13px;font-weight:700}
+.post{padding:12px 12px 4px}
+.post+.post{border-top:1px solid var(--line)}
+.pt{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px}
+.pt a{color:var(--fg);text-decoration:none;font-weight:700;line-height:1.35;font-size:13px}
+.star{color:var(--warn);margin-right:3px}
+.pm{font-size:11px;color:var(--mute)}
+.sel{font-size:11px;color:var(--acc);white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.ph{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--s2) center/cover;cursor:pointer}
+.ph[data-cur=true]{outline:2px solid var(--fg);outline-offset:-2px}
 .ph[data-on=true]{box-shadow:inset 0 0 0 3px var(--acc)}
-.ph[data-on=true] .chk{display:grid}
-.kind{position:absolute;left:6px;top:6px;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);padding:0 7px;border-radius:999px}
-.lk{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
-.lk label{display:flex;gap:6px;align-items:center;font-size:12px;background:var(--s2);border-radius:999px;padding:3px 10px;max-width:100%}
-.lk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.postbtns{display:flex;gap:12px;margin-top:10px;font-size:12px}
-.postbtns button{color:var(--acc)}
-.empty{padding:80px 10px;text-align:center;color:var(--mute);display:grid;gap:6px}.empty b{color:var(--fg);font-size:16px}
-.bar{position:fixed;left:0;right:0;bottom:0;padding:12px max(16px,env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
-.barin{max-width:760px;margin:0 auto;display:grid;gap:10px}
-.line{display:flex;gap:10px;align-items:center}
-.tin{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:15px}
-.dtin{width:112px;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px}
-.cnt{font-size:13px;color:var(--mute);line-height:1.35;font-variant-numeric:tabular-nums;flex:1;min-width:0}
-.cnt b{color:var(--fg);font-size:16px}.over{color:var(--warn)}
-.go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:999px;padding:12px 26px;font-size:15px}
-.go:disabled{opacity:.4;cursor:default}
-.ghost{border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:end center;z-index:10}
-.sheet>div{background:var(--s1);width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:22px max(18px,env(safe-area-inset-left)) calc(22px + env(safe-area-inset-bottom));display:grid;gap:12px}
-.sheet h2{margin:0;font-size:18px;letter-spacing:-.02em}
-.sheet p{margin:0;font-size:14px;overflow-wrap:anywhere}
-.sheet .row{display:flex;gap:10px;justify-content:flex-end}
-.st{font-size:13px;color:var(--mute)}
-.setup{background:var(--s1);border-radius:20px;padding:20px;box-shadow:var(--shadow);display:grid;gap:12px;margin-top:10px}
+.kind{position:absolute;left:4px;top:4px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);padding:0 5px;border-radius:99px}
+.ck{position:absolute;right:4px;bottom:4px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:grid;place-items:center;color:transparent;font-size:12px;font-weight:700}
+.ph[data-on=true] .ck{background:var(--acc);border-color:var(--acc);color:var(--accfg)}
+.pb{display:flex;gap:12px;font-size:11px;margin:6px 0 8px}.pb button{color:var(--acc)}
+.lks{font-size:11px;color:var(--mute);margin:2px 0 8px;overflow-wrap:anywhere}
+.empty{padding:60px 14px;text-align:center;color:var(--mute)}
+/* 뷰어 */
+.view{display:flex;flex-direction:column;height:100%;background:#000;position:relative}
+.stage{flex:1;min-height:0;display:grid;place-items:center;padding:12px}
+.stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
+.vbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s1);border-top:1px solid var(--line)}
+.vbar .info{flex:1;min-width:0;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbtn{background:var(--s2);border-radius:999px;padding:7px 14px;font-size:13px}
+.vsel{background:var(--acc);color:var(--accfg);font-weight:700}
+.vph{color:#8a8780;font-size:13px}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:56px;color:#fff;background:rgba(255,255,255,.12);border-radius:10px;font-size:20px}
+.arrow.l{left:10px}.arrow.r{right:10px}
+/* 글쓰기 (DC 글쓰기 화면 모양) */
+.w{background:#fff;color:#222;min-height:100%;font-family:"Malgun Gothic","Noto Sans KR",sans-serif}
+.w .top{background:#3b4890;color:#fff;padding:12px 16px;font-weight:700;font-size:15px}
+.w .box{padding:14px 16px;display:grid;gap:12px}
+.w label{font-size:12px;color:#666;display:block;margin-bottom:3px}
+.w .ttl{display:flex;align-items:center;border:1px solid #ccc;padding:0 8px;gap:4px;background:#fff;min-height:38px;flex-wrap:wrap}
+.w .ttl span{color:#333;font-size:13px;white-space:nowrap}
+.w .ttl input{flex:1;min-width:80px;border:0;outline:0;font-size:14px;padding:8px 2px;background:none;color:#111}
+.w .ed{border:1px solid #ccc;min-height:220px;padding:10px;background:#fff;display:grid;gap:8px;align-content:start}
+.w .ed .lk{font-size:12px;color:#3b4890;overflow-wrap:anywhere;display:flex;gap:6px;align-items:flex-start}
+.w .ed .lk input{margin-top:3px}
+.w .ed .im{display:flex;flex-wrap:wrap;gap:4px}
+.w .ed .im div{width:62px;height:62px;background:#eee center/cover;border:1px solid #ddd;position:relative;cursor:pointer}
+.w .ed .im div[data-c=true]{outline:2px solid #3b4890}
+.w .cn{display:flex;gap:14px;font-size:13px;color:#444;flex-wrap:wrap}
+.w .cn b{color:#111}.w .over{color:#c0392b;font-weight:700}
+.w .ev{width:130px;border:1px solid #ccc;padding:7px 8px;font-size:13px;background:#fff;color:#111}
+.w .btns{display:flex;gap:8px;justify-content:center;padding-top:4px}
+.w .reg{background:#3b4890;color:#fff;font-weight:700;padding:11px 44px;font-size:15px;border:1px solid #3b4890}
+.w .reg:disabled{opacity:.4;cursor:default}
+.w .cx{background:#fff;color:#333;border:1px solid #ccc;padding:11px 22px;font-size:14px}
+.w .st{font-size:12px;color:#666;text-align:center;min-height:18px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
+.sheet>div{background:#fff;color:#222;width:100%;max-width:420px;padding:20px;display:grid;gap:12px;border-radius:4px}
+.sheet h2{margin:0;font-size:17px}.sheet p{margin:0;font-size:14px;overflow-wrap:anywhere}
+.sheet .row{display:flex;gap:8px;justify-content:flex-end}
+.setup{max-width:520px;margin:40px auto;padding:20px;background:var(--s1);border-radius:16px;display:grid;gap:12px}
 .setup ol{margin:0;padding-left:20px;font-size:13px;color:var(--mute)}
-.setup a{color:var(--acc)}
+.setup input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.setup .go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:999px;padding:11px}
 </style></head><body>
-<div class="wrap" id="app"></div>
-<div class="bar" id="bar" hidden><div class="barin" id="barin"></div></div>
+<div id="app"></div>
 <div id="sheet"></div>
 <script>
 const REPO="kchartbot/senchive",API="https://api.github.com";
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"'`]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;","`":"&#96;"}[c]));
-const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s), okUrl=s=>/^https?:\/\/[^\s"'<>`]+$/i.test(s);
+const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s),okUrl=s=>/^https?:\/\/[^\s"'<>`]+$/i.test(s);
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
-let token=LS.get("tk")||"",idx=null,sel=new Set(),linkOff=new Set(),status="",busy=false;
-const kstDay=()=>{const d=new Date(Date.now()+9*3600e3);return d.toISOString().slice(0,10)};
+const DEF={include:"리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈".split(","),exclude:"버블,디콘,dccon,밈".split(","),other:"베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈".split(","),bait:"비하인드,떴다,떳다".split(",")};
+const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 수집)",exclude:"제외 키워드 (제목에 있으면 건너뜀)",other:"다른 그룹 (제목에 있으면 건너뜀)",bait:"떡밥 키워드 (★ 표시)"};
+let token=LS.get("tk")||"",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
+let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
+const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 let since=kstDay().replace(/-/g,"."),evdate=kstDay(),topic=LS.get("topic")||"";
+const KW=()=>kw||(idx&&idx.kw)||DEF;
 
 async function gh(path,opt={}){
   const r=await fetch(API+path,{...opt,headers:{Authorization:"Bearer "+token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
   if(!r.ok){const t=await r.text();throw new Error(r.status+" "+t.slice(0,160))}
   return r.status===204?null:r;
 }
-const thumbUrl=id=>`https://raw.githubusercontent.com/${REPO}/review-scan/t/${id}.jpg?v=${idx?.run||""}`;
-const files=()=>idx.posts.flatMap(p=>p.files.map(f=>({...f,no:p.no})));
-const chosen=()=>files().filter(f=>sel.has(f.id));
-function counts(){const c=chosen();return{c:c.filter(f=>f.t==="clip").length,i:c.filter(f=>f.t!=="clip").length}}
-function chosenLinks(){const nos=new Set(chosen().map(f=>f.no));return [...new Set(idx.posts.filter(p=>nos.has(p.no)).flatMap(p=>p.links))].filter(l=>!linkOff.has(l))}
-function titleOf(){const k=counts(),l=chosenLinks().length,p=k.c+k.i;return `[${evdate.replace(/-/g,"")}] ${topic||"○○"} ${l&&p?"링크+짤 모음":l?"링크 모음":"짤 모음"}`}
+const RAW=`https://raw.githubusercontent.com/${REPO}/review-scan`;
+const tUrl=f=>`${RAW}/t/${f.id}.jpg?v=${idx?.run||""}`;
+const mUrl=f=>f.o?`${RAW}/m/${f.id}.${f.o}?v=${idx?.run||""}`:`${RAW}/m/${f.id}.jpg?v=${idx?.run||""}`;
+const all=()=>idx?idx.posts.flatMap(p=>p.files.map(f=>({...f,no:p.no,ptitle:p.title,purl:p.url}))):[];
+const byId=id=>all().find(f=>f.id===id);
+const chosen=()=>sel.map(byId).filter(Boolean);
+const cnt=()=>{const c=chosen();return{c:c.filter(f=>f.t==="clip").length,i:c.filter(f=>f.t!=="clip").length}};
+const chosenLinks=()=>{const nos=new Set(chosen().map(f=>f.no));return [...new Set(idx.posts.filter(p=>nos.has(p.no)).flatMap(p=>p.links))].filter(l=>!linkOff.has(l))};
+const titleOf=()=>{const k=cnt(),l=idx?chosenLinks().length:0,p=k.c+k.i;return `[${evdate.replace(/-/g,"")}] ${topic||"○○"} ${l&&p?"링크+짤 모음":l?"링크 모음":"짤 모음"}`};
 
-function renderSetup(){
-  $("#bar").hidden=true;
-  $("#app").innerHTML=`<div class="top"><h1>센카이브</h1></div><div class="setup"><b>처음 한 번 토큰을 넣어 주세요</b>
-   <ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 토큰 만들기</a></li>
-   <li>저장소는 <b>senchive</b>만 선택</li><li>권한은 <b>Actions: Read and write</b>, <b>Contents: Read-only</b></li>
-   <li>만든 토큰을 아래에 붙여넣기 (이 기기 브라우저에만 저장됩니다)</li></ol>
-   <input class="tin" id="tk" type="password" placeholder="github_pat_..." autocomplete="off"><button class="go" id="tksave">저장</button><div class="st" id="tkst"></div></div>`;
-  $("#tksave").onclick=async()=>{token=$("#tk").value.trim();if(!token)return;
-    try{await gh(`/repos/${REPO}`);LS.set("tk",token);start()}catch(e){token="";$("#tkst").textContent="토큰이 맞지 않습니다: "+e.message}};
+function clean(x){
+  const posts=(Array.isArray(x?.posts)?x.posts:[]).map(p=>({no:String(p.no).replace(/\D/g,""),bait:!!p.bait,title:String(p.title||"").slice(0,200),when:String(p.when||"").slice(0,20),head:String(p.head||"").slice(0,20),rec:+p.rec||0,
+    url:/^https:\/\/gall\.dcinside\.com\//.test(String(p.url||""))&&okUrl(p.url)?p.url:"#",
+    links:(Array.isArray(p.links)?p.links:[]).map(String).filter(okUrl).slice(0,20),
+    files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img",o:/^(gif|webp)$/.test(f.o)?f.o:""})).slice(0,80)})).filter(p=>p.no);
+  const k=x?.kw,cl=a=>(Array.isArray(a)?a:[]).map(v=>String(v).slice(0,40)).slice(0,300);
+  return {generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),posts,kw:k?{include:cl(k.include),exclude:cl(k.exclude),other:cl(k.other),bait:cl(k.bait)}:null};
 }
-function render(){
+
+/* ---------- 화면 ---------- */
+function build(){
   $("#app").innerHTML=`
-   <div class="top"><div><h1>센카이브</h1><div class="sub" id="sub"><button id="logout" style="color:var(--mute);font-size:12px;text-decoration:underline;margin-right:6px">토큰 지우기</button>${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div></div>
-   <div class="scanrow"><input class="date" id="since" value="${esc(since)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button></div></div>
-   <div class="st" id="st" style="margin-bottom:12px">${esc(status)}</div>
-   ${idx&&idx.posts.length?idx.posts.map(p=>{const n=p.files.filter(f=>sel.has(f.id)).length;return `<section class="post" data-no="${p.no}">
-     <div class="ph-head"><div><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.title)}</a><div class="meta">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel">${n?n+"개 선택":""}</span></div>
-     ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" data-on="${sel.has(f.id)}" role="checkbox" aria-checked="${sel.has(f.id)}" aria-label="${f.id}" tabindex="0" style="background-image:url('${thumbUrl(f.id)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="chk">✓</span></div>`).join("")}</div>
-     <div class="postbtns"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="meta">파일 없음 (링크만)</div>'}
-     ${p.links.length?`<div class="lk">${p.links.map(l=>`<label><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l.replace(/^https?:\/\/(www\.)?/,""))}</span></label>`).join("")}</div>`:""}
-   </section>`}).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b>위의 스캔을 눌러 주세요</div>`}`;
+   <aside class="pane kw ${tab==="kw"?"on":""}" id="pKw"></aside>
+   <section class="pane ${tab==="list"?"on":""}" id="pList"></section>
+   <section class="pane ${tab==="view"?"on":""}" id="pView"></section>
+   <section class="pane ${tab==="write"?"on":""}" id="pWrite"></section>
+   <nav class="nav">${[["kw","키워드"],["list","목록"],["view","원본"],["write","글쓰기"]].map(([k,n])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${n}</button>`).join("")}</nav>`;
+  $$(".nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$(".pane").forEach(p=>p.classList.toggle("on",p.id==="p"+tab[0].toUpperCase()+tab.slice(1)));$$(".nav button").forEach(x=>x.classList.toggle("on",x===b))});
+  rKw();rList();rView();rWrite();
+}
+function rKw(){
+  const k=KW();
+  $("#pKw").innerHTML=`<div class="hd"><h2>키워드</h2><div class="sub">스캔할 때 적용됩니다 · 이 기기에 저장</div></div><div class="pad">`+
+   Object.keys(KWN).map(n=>`<h3>${KWN[n]}</h3><div class="chips">${(k[n]||[]).map((w,i)=>`<span class="chip">${esc(w)}<button data-del="${n}:${i}" aria-label="삭제">×</button></span>`).join("")}</div>
+   <div class="add"><input data-in="${n}" placeholder="추가" maxlength="40"><button data-add="${n}">추가</button></div>`).join("")+
+   `<div style="margin-top:18px"><button class="mini" id="kwreset">기본값으로</button></div></div>`;
+  const save=()=>{LS.set("kw",JSON.stringify(kw));rKw()};
+  const cur_=()=>kw||(kw=JSON.parse(JSON.stringify(KW())));
+  $$("[data-del]").forEach(b=>b.onclick=()=>{const[n,i]=b.dataset.del.split(":");cur_()[n].splice(+i,1);save()});
+  const add=n=>{const inp=$(`[data-in=${n}]`),v=inp.value.trim();if(!v||/["'`$\\<>|;&,\n\r]/.test(v))return;const a=cur_()[n];if(!a.includes(v))a.push(v);save()};
+  $$("[data-add]").forEach(b=>b.onclick=()=>add(b.dataset.add));
+  $$("[data-in]").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")add(i.dataset.in)});
+  $("#kwreset").onclick=()=>{kw=null;LS.del("kw");rKw()};
+}
+function rList(){
+  const P=$("#pList");
+  P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" style="color:var(--mute);font-size:11px;text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
+   <div class="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div>
+   <div class="scanrow"><input class="date" id="since" value="${esc(since)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button></div>
+   <div class="sub" id="st" style="margin-top:6px">${esc(status)}</div></div>`+
+   (idx&&idx.posts.length?idx.posts.map(p=>`<div class="post" data-no="${p.no}"><div class="pt"><div><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="star">★</span>':""}${esc(p.title)}</a><div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel"></span></div>
+    ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
+    <div class="pb"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="pm">파일 없음 (링크만)</div>'}
+    ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
   $("#logout").onclick=()=>{LS.del("tk");token="";idx=null;start()};
   $("#since").onchange=e=>{since=e.target.value.trim()};
   $("#scan").onclick=doScan;
-  document.querySelectorAll(".ph").forEach(t=>{const tg=()=>{const id=t.dataset.id;sel.has(id)?sel.delete(id):sel.add(id);t.dataset.on=sel.has(id);t.setAttribute("aria-checked",sel.has(id));updPost(t.closest(".post"));bar()};
-    t.onclick=tg;t.onkeydown=e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();tg()}}});
-  document.querySelectorAll("[data-all]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.all).files.forEach(f=>sel.add(f.id));render();bar()});
-  document.querySelectorAll("[data-none]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.none).files.forEach(f=>sel.delete(f.id));render();bar()});
-  document.querySelectorAll("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);bar()});
-  bar();
+  $$(".ph").forEach(t=>{t.onclick=e=>{if(e.target.dataset.ck){toggle(e.target.dataset.ck);return}show(t.dataset.id)};t.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();show(t.dataset.id)}else if(e.key===" "){e.preventDefault();toggle(t.dataset.id)}}});
+  $$("[data-all]").forEach(b=>b.onclick=()=>{idx.posts.find(p=>p.no==b.dataset.all).files.forEach(f=>{if(!sel.includes(f.id))sel.push(f.id)});sync()});
+  $$("[data-none]").forEach(b=>b.onclick=()=>{const ids=idx.posts.find(p=>p.no==b.dataset.none).files.map(f=>f.id);sel=sel.filter(i=>!ids.includes(i));sync()});
+  mark();
 }
-function updPost(sec){const p=idx.posts.find(x=>x.no==sec.dataset.no),n=p.files.filter(f=>sel.has(f.id)).length;sec.querySelector(".sel").textContent=n?n+"개 선택":""}
-function bar(){
-  if(!idx){$("#bar").hidden=true;return}
-  $("#bar").hidden=false;const k=counts(),tot=k.c+k.i;
-  $("#barin").innerHTML=`<div class="line"><input class="tin" id="topic" placeholder="글 주제 (제목에 들어감)" value="${esc(topic)}"><input class="dtin" id="ev" value="${esc(evdate)}" aria-label="행사 날짜"></div>
-   <div class="line"><div class="cnt"><b>${tot}개 선택</b> · 사진 <span class="${k.i>30?"over":""}">${k.i}/30</span> · 움짤 <span class="${k.c>14?"over":""}">${k.c}/14</span><br><span id="tt" style="overflow-wrap:anywhere">${esc(titleOf())}</span></div>
-   <button class="go" id="up" ${tot&&topic.trim()&&!busy?"":"disabled"}>업로드</button></div>`;
-  $("#topic").oninput=e=>{topic=e.target.value;LS.set("topic",topic);$("#tt").textContent=titleOf();$("#up").disabled=!(counts().c+counts().i&&topic.trim()&&!busy)};
-  $("#ev").onchange=e=>{evdate=e.target.value.trim();$("#tt").textContent=titleOf()};
+function mark(){
+  $$(".ph").forEach(t=>{t.dataset.on=sel.includes(t.dataset.id);t.dataset.cur=t.dataset.id===cur});
+  $$(".post").forEach(el=>{const p=idx.posts.find(x=>x.no==el.dataset.no),n=p.files.filter(f=>sel.includes(f.id)).length;el.querySelector(".sel").textContent=n?n+"개 선택":""});
+}
+function toggle(id){const i=sel.indexOf(id);i<0?sel.push(id):sel.splice(i,1);sync()}
+function show(id){cur=id;mark();rView();if(matchMedia("(max-width:1000px)").matches){tab="view";$$(".pane").forEach(p=>p.classList.toggle("on",p.id==="pView"));$$(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab==="view"))}}
+function sync(){mark();rView();rWrite()}
+function rView(){
+  const P=$("#pView"),L=all(),i=L.findIndex(f=>f.id===cur),f=L[i];
+  if(!f){P.innerHTML=`<div class="view"><div class="stage"><div class="vph">왼쪽 목록에서 사진을 누르면 원본이 여기에 보입니다</div></div></div>`;return}
+  const on=sel.includes(f.id);
+  P.innerHTML=`<div class="view"><div class="stage"><img id="vimg" src="${mUrl(f)}" alt="${esc(f.id)}"></div>
+   <button class="arrow l" id="pv" aria-label="이전">‹</button><button class="arrow r" id="nx" aria-label="다음">›</button>
+   <div class="vbar"><div class="info">${i+1}/${L.length} · ${f.t==="clip"?"움짤":"사진"} · ${esc(f.ptitle)}</div><button class="vbtn ${on?"":"vsel"}" id="vt">${on?"선택 해제":"선택"}</button></div></div>`;
+  $("#vt").onclick=()=>toggle(f.id);
+  $("#pv").onclick=()=>show(L[(i-1+L.length)%L.length].id);$("#nx").onclick=()=>show(L[(i+1)%L.length].id);
+}
+addEventListener("keydown",e=>{if(/INPUT|SELECT/.test(document.activeElement?.tagName)||!cur)return;const L=all(),i=L.findIndex(f=>f.id===cur);
+  if(e.key==="ArrowRight")show(L[(i+1)%L.length].id);else if(e.key==="ArrowLeft")show(L[(i-1+L.length)%L.length].id);else if(e.key===" "||e.key==="Enter"){e.preventDefault();toggle(cur)}});
+function rWrite(){
+  const P=$("#pWrite"),k=cnt(),tot=k.c+k.i,ch=chosen(),links=idx?[...new Set(idx.posts.filter(p=>new Set(ch.map(f=>f.no)).has(p.no)).flatMap(p=>p.links))]:[];
+  P.innerHTML=`<div class="w"><div class="top">글쓰기</div><div class="box">
+   <div><label>제목</label><div class="ttl"><span>[${esc(evdate.replace(/-/g,""))}]</span><input id="topic" placeholder="주제 입력" value="${esc(topic)}" maxlength="50"><span>${links.filter(l=>!linkOff.has(l)).length&&tot?"링크+짤 모음":links.filter(l=>!linkOff.has(l)).length?"링크 모음":"짤 모음"}</span></div></div>
+   <div><label>행사 날짜</label><input class="ev" id="ev" value="${esc(evdate)}"></div>
+   <div><label>본문</label><div class="ed">
+     ${links.map(l=>`<div class="lk"><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l)}</span></div>`).join("")}
+     ${ch.length?`<div class="im">${ch.map(f=>`<div data-v="${f.id}" data-c="${f.id===cur}" style="background-image:url('${tUrl(f)}')" title="${esc(f.id)}"></div>`).join("")}</div>`:`<div style="color:#999;font-size:13px">선택한 사진·움짤이 여기에 순서대로 들어갑니다</div>`}
+   </div></div>
+   <div class="cn"><span>사진 <b class="${k.i>30?"over":""}">${k.i}</b>/30</span><span>움짤 <b class="${k.c>14?"over":""}">${k.c}</b>/14</span><span>합계 <b class="${tot>50?"over":""}">${tot}</b>/50</span></div>
+   <div class="btns"><button class="reg" id="up" ${tot&&topic.trim()&&!busy&&idx?"":"disabled"}>등록</button><button class="cx" id="clr">선택 비우기</button></div>
+   <div class="st">${esc(status)}</div></div></div>`;
+  $("#topic").oninput=e=>{topic=e.target.value;LS.set("topic",topic);$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
+  $("#topic").onchange=()=>rWrite();
+  $("#ev").onchange=e=>{evdate=e.target.value.trim();rWrite()};
+  $$("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);rWrite()});
+  $$("[data-v]").forEach(d=>d.onclick=()=>show(d.dataset.v));
+  $("#clr").onclick=()=>{sel=[];sync()};
   $("#up").onclick=confirmUp;
 }
+function setStatus(s){status=s;const a=$("#st");if(a)a.textContent=s;const b=$(".w .st");if(b)b.textContent=s}
 function confirmUp(){
-  const k=counts(),L=chosenLinks();
-  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 업로드할까요?</h2><p><b>${esc(titleOf())}</b></p><p class="st">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="ghost" id="no">취소</button><button class="go" id="yes">업로드</button></div></div></div>`;
+  const k=cnt(),L=chosenLinks();
+  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 등록할까요?</h2><p><b>${esc(titleOf())}</b></p><p style="color:#666">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="cx" id="no" style="background:#fff;border:1px solid #ccc;padding:9px 18px">취소</button><button class="reg" id="yes" style="background:#3b4890;color:#fff;border:0;padding:9px 26px;font-weight:700">등록</button></div></div></div>`;
   $("#no").onclick=()=>$("#sheet").innerHTML="";
   $("#yes").onclick=()=>{$("#sheet").innerHTML="";doUpload()};
 }
 async function waitRun(wf,after,label){
-  for(let i=0;i<240;i++){
+  for(let i=0;i<300;i++){
     await new Promise(r=>setTimeout(r,6000));
-    const r=await (await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?event=workflow_dispatch&per_page=3`)).json();
+    const r=await(await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?event=workflow_dispatch&per_page=3`)).json();
     const run=r.workflow_runs.find(x=>new Date(x.created_at).getTime()>=after-5000);
-    if(run){status=`${label} ${run.status==="completed"?"":"진행 중…"}`;setSt();
-      if(run.status==="completed")return run.conclusion}
+    if(run){setStatus(`${label} ${run.status==="completed"?"":"진행 중…"}`);if(run.status==="completed")return run.conclusion}
   }
   return "timeout";
 }
-function setSt(){const e=$("#st");if(e)e.textContent=status}
 async function doScan(){
   if(busy)return;
-  if(!/^\d{4}\.\d{2}\.\d{2}$/.test(since)){status="스캔 날짜는 YYYY.MM.DD 형식이어야 합니다";render();return}busy=true;status="스캔을 요청했습니다";render();
-  try{const t0=Date.now();
-    await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{since}})});
+  if(!/^\d{4}\.\d{2}\.\d{2}$/.test(since)){setStatus("스캔 날짜는 YYYY.MM.DD 형식이어야 합니다");return}
+  busy=true;rList();setStatus("스캔을 요청했습니다");
+  try{const t0=Date.now(),k=KW(),j=a=>(a||[]).join(",");
+    const inputs={since};if(kw)Object.assign(inputs,{include:j(k.include),exclude:j(k.exclude),other:j(k.other),bait:j(k.bait)});
+    await gh(`/repos/${REPO}/actions/workflows/review-scan.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs})});
     const c=await waitRun("review-scan.yml",t0,"스캔");
-    if(c!=="success"){status="스캔 실패 ("+c+")";busy=false;render();return}
+    if(c!=="success"){status="스캔 실패 ("+c+")";busy=false;rList();return}
     await load();status="스캔 완료"
   }catch(e){status="오류: "+e.message}
-  busy=false;render();
+  busy=false;build();
 }
 async function doUpload(){
-  if(busy)return;const k=counts();if(!k.c&&!k.i)return;
-  if(!/^[^\/\\\n\r"`$]{1,50}$/.test(topic.trim())||topic.includes("..")){status="주제에 쓸 수 없는 문자가 있거나 너무 깁니다";render();return}
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(evdate)){status="행사 날짜는 YYYY-MM-DD 형식이어야 합니다";render();return}
-  busy=true;status="업로드를 요청했습니다";render();
+  if(busy)return;const k=cnt();if(!k.c&&!k.i)return;
+  if(!/^[^\/\\\n\r"`$]{1,50}$/.test(topic.trim())||topic.includes("..")){setStatus("주제에 쓸 수 없는 문자가 있거나 너무 깁니다");return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(evdate)){setStatus("행사 날짜는 YYYY-MM-DD 형식이어야 합니다");return}
+  busy=true;rWrite();setStatus("업로드를 요청했습니다");
   try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))];
     await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
     const c=await waitRun("post-topic.yml",t0,"업로드");
     status=c==="success"?"업로드 완료":"업로드 실패 ("+c+")";
-    if(c==="success"){sel.clear()}
+    if(c==="success")sel=[];
   }catch(e){status="오류: "+e.message}
-  busy=false;render();
-}
-function clean(x){
-  const posts=(Array.isArray(x?.posts)?x.posts:[]).map(p=>({no:String(p.no).replace(/\D/g,""),title:String(p.title||"").slice(0,200),when:String(p.when||"").slice(0,20),head:String(p.head||"").slice(0,20),
-    rec:+p.rec||0,views:+p.views||0,url:okUrl(String(p.url||""))&&/^https:\/\/gall\.dcinside\.com\//.test(p.url)?p.url:"#",
-    links:(Array.isArray(p.links)?p.links:[]).map(String).filter(okUrl).slice(0,20),
-    files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img"})).slice(0,80)})).filter(p=>p.no);
-  return {generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),since:String(x?.since||""),posts};
+  busy=false;sync();setStatus(status);
 }
 async function load(){
   try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=clean(await r.json());
-    const ids=new Set(files().map(f=>f.id));[...sel].forEach(i=>{if(!ids.has(i))sel.delete(i)})}catch(e){idx=null}
+    const ids=new Set(all().map(f=>f.id));sel=sel.filter(i=>ids.has(i));if(!ids.has(cur))cur=null}catch(e){idx=null}
+}
+function renderSetup(){
+  $("#app").style.display="block";
+  $("#app").innerHTML=`<div class="setup"><h2 style="margin:0">센카이브</h2><b>처음 한 번 토큰을 넣어 주세요</b>
+   <ol><li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">GitHub 토큰 만들기</a></li>
+   <li>Repository access는 <b>Only select repositories → senchive</b></li><li>Repository permissions: <b>Actions = Read and write</b>, <b>Contents = Read-only</b></li>
+   <li>만든 토큰을 아래에 붙여넣기 (이 기기 브라우저에만 저장됩니다)</li></ol>
+   <input id="tk" type="password" placeholder="github_pat_..." autocomplete="off"><button class="go" id="tksave">저장</button><div class="sub" id="tkst"></div></div>`;
+  $("#tksave").onclick=async()=>{token=$("#tk").value.trim();if(!token)return;
+    try{await gh(`/repos/${REPO}`);LS.set("tk",token);$("#app").style.display="";start()}catch(e){token="";$("#tkst").textContent="토큰이 맞지 않습니다: "+e.message}};
 }
 async function start(){
   if(!token){renderSetup();return}
-  status="불러오는 중…";render();await load();status="";render();
+  build();setStatus("불러오는 중…");await load();status="";build();
 }
 start();
 </script></body></html>
