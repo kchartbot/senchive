@@ -87,8 +87,11 @@ def main():
                 b = d.S.get(u, headers={"Referer": p["url"]}, timeout=40); time.sleep(d.DELAY)
                 if not (b.ok and b.content[4:8] == b"ftyp" and len(b.content) <= 12_000_000): continue
                 tmp = out / f"{name}.mp4"; tmp.write_bytes(b.content)
-                ok = frame_thumb(tmp, name); tmp.unlink()
-                if ok: files.append(dict(id=name, t="clip"))
+                ok = frame_thumb(tmp, name)
+                keep = ok and tmp.stat().st_size <= 6_000_000
+                if keep: tmp.replace(out / "m" / f"{name}.mp4")   # 가벼운 영상은 검수 화면에서 재생한다
+                else: tmp.unlink()
+                if ok: files.append(dict(id=name, t="clip", **({"o": "mp4"} if keep else {})))
             except SystemExit: raise
             except Exception as e: print("영상 실패", name, str(e)[:60])
         for i, u in enumerate(p.get("images", [])[:MAXFILES]):
@@ -100,7 +103,7 @@ def main():
                 im = Image.open(io.BytesIO(b.content)); thumb(im, name)
                 anim = ext == "gif" or (ext == "webp" and b"ANIM" in b.content[:200])
                 f = dict(id=name, t="clip" if anim else "img")
-                if anim and len(b.content) <= 3_000_000:
+                if anim and len(b.content) <= 6_000_000:
                     (out / "m" / f"{name}.{ext}").write_bytes(b.content); f["o"] = ext   # 가벼운 움짤은 원본 그대로 보여 준다
                 files.append(f)
             except SystemExit: raise
