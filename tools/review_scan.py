@@ -12,6 +12,8 @@ SINCE = os.environ.get("SINCE") or datetime.now(KST).strftime("%Y.%m.%d")
 MAXP = int(os.environ.get("MAXP", "12"))
 MAXPOSTS = int(os.environ.get("MAXPOSTS", "0"))   # 0 = 제한 없음
 MAXFILES = int(os.environ.get("MAXFILES", "40"))
+RECOMMEND = os.environ.get("RECOMMEND", "true").lower() != "false"   # false 면 개념글이 아닌 글도 훑는다
+HEAD_OFF = {h.strip() for h in os.environ.get("HEAD_OFF", "").split(",") if h.strip()}   # 건너뛸 말머리
 d.GALL, d.KIND, d.HEAD = "kpopcontent", "mgallery", ""
 def kw(env, default):
     v = os.environ.get(env, "").strip()
@@ -28,7 +30,7 @@ out = Path("out/review"); (out / "t").mkdir(parents=True, exist_ok=True); (out /
 def rows():
     res = []
     for p in range(1, MAXP + 1):
-        url = f"{d.BASE}/mgallery/board/lists/?id=kpopcontent&sort_type=N&page={p}&exception_mode=recommend"
+        url = f"{d.BASE}/mgallery/board/lists/?id=kpopcontent&sort_type=N&page={p}" + ("&exception_mode=recommend" if RECOMMEND else "")
         soup = BeautifulSoup(d.get(url).text, "html.parser"); page = []
         for tr in soup.select("tr.ub-content"):
             no = tr.get("data-no"); a = tr.select_one("td.gall_tit a")
@@ -63,10 +65,13 @@ def frame_thumb(src, name, headers=""):
 
 def main():
     rs = rows(); posts = []
+    heads = {}
+    for r in rs: heads[r["head"] or "(없음)"] = heads.get(r["head"] or "(없음)", 0) + 1
     print("개념글", len(rs))
     read = 0
     for r in rs:
         if MAXPOSTS and read >= MAXPOSTS: print("글 수 제한에 도달", MAXPOSTS); break
+        if (r["head"] or "(없음)") in HEAD_OFF: continue
         if OUT_KW.search(r["title"]) or any(k in r["title"] for k in OTHER): continue
         read += 1
         try: p = d.post(r["no"])
@@ -116,7 +121,7 @@ def main():
         posts.append(dict(no=p["no"], bait=any(k in r["title"] for k in BAIT), title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
         print("글", p["no"], p["title"][:30], len(files))
     posts.sort(key=lambda x: x["when"], reverse=True)
-    (out / "index.json").write_text(json.dumps(dict(kw=dict(include=INC_L, exclude=EXC_L, other=OTHER, bait=BAIT), generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
+    (out / "index.json").write_text(json.dumps(dict(kw=dict(include=INC_L, exclude=EXC_L, other=OTHER, bait=BAIT), heads=heads, recommend=RECOMMEND, generated=datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S"), since=SINCE, run=os.environ.get("GITHUB_RUN_ID", ""), posts=posts), ensure_ascii=False), encoding="utf-8")
     print("저장", len(posts), "글")
 
 
