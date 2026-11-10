@@ -1,4 +1,5 @@
 name: post-topic
+run-name: ${{ inputs.topic }}
 on:
   workflow_dispatch:
     inputs:

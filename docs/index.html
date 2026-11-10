@@ -3,114 +3,127 @@
 <meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; media-src https://raw.githubusercontent.com; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
 <title>센카이브 검수</title>
 <style>
-:root{--bg:#f1f0ee;--s1:#fff;--s2:#ebeae7;--fg:#18171a;--mute:#86837c;--line:#e2e0db;--acc:#e0527a;--accfg:#fff;--warn:#c47a10;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0e0e10;--s1:#18181b;--s2:#232327;--fg:#f2f1f4;--mute:#85838c;--line:#27272c;--acc:#ff7a9c;--accfg:#1a0b10;--warn:#f0b050;color-scheme:dark}}
+:root{--bg:#f4f4f5;--s1:#fff;--s2:#ececee;--fg:#1f2024;--mute:#74767d;--line:#dcdde0;--acc:#3b4890;--accfg:#fff;--warn:#a85d12;--ok:#2f7d4f;--bad:#b3362b;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#161719;--s1:#1d1e21;--s2:#2a2b2f;--fg:#e4e4e6;--mute:#8a8c93;--line:#303236;--acc:#8294e8;--accfg:#10131f;--warn:#e0a458;--ok:#5fbf86;--bad:#ef7f74;color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 "Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.5 "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;overflow:hidden}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input,select{font:inherit;color:var(--fg)}
-button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-#app{height:100%;display:grid;grid-template-columns:210px minmax(440px,1.35fr) minmax(0,1fr) 330px}
-.pane{min-height:0;min-width:0;overflow:auto;border-right:1px solid var(--line)}
+button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#app{height:100%;display:grid;grid-template-columns:220px minmax(420px,1.35fr) minmax(0,1fr) 340px}
+.pane{min-height:0;min-width:0;overflow:auto;border-right:1px solid var(--line);background:var(--s1)}
 .pane:last-child{border-right:0}
+#pView{background:#111}
 .nav{display:none}
 @media(max-width:1000px){
- #app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 54px}
+ #app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 48px}
  .pane{display:none;border-right:0}.pane.on{display:block}
  .nav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--s1);padding-bottom:env(safe-area-inset-bottom)}
- .nav button{font-size:13px;color:var(--mute)}.nav button.on{color:var(--acc);font-weight:700}
+ .nav button{color:var(--mute)}.nav button.on{color:var(--acc);font-weight:700;box-shadow:inset 0 2px 0 var(--acc)}
 }
-.hd{position:sticky;top:0;z-index:3;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);padding:14px 14px 10px;border-bottom:1px solid var(--line)}
-.hd h2{margin:0;font-size:15px;letter-spacing:-.01em}
+.hd{position:sticky;top:0;z-index:3;background:var(--s1);padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.hd h2{margin:0;font-size:14px;font-weight:700}
 .sub{font-size:12px;color:var(--mute)}
-.pad{padding:12px 14px}
+.pad{padding:4px 14px 14px}
+.tabs{display:flex;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--s1);z-index:3}
+.tabs button{flex:1;padding:11px 0;color:var(--mute);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--fg);font-weight:700;border-bottom-color:var(--acc)}
 /* 키워드 */
-.kd{border-bottom:1px solid var(--line);padding:10px 0}
-.kd summary{cursor:pointer;font-size:13px;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.kd{border-bottom:1px solid var(--line);padding:9px 0}
+.kd summary{cursor:pointer;font-weight:700;list-style:none;display:flex;align-items:center}
 .kd summary::-webkit-details-marker{display:none}
-.kd summary::after{content:"▾";color:var(--mute);margin-left:6px}
-.kd[open] summary::after{content:"▴"}
+.kd summary::after{content:"+";color:var(--mute);margin-left:8px;font-weight:400}
+.kd[open] summary::after{content:"−"}
 .kc{margin-left:auto;font-weight:400;font-size:12px;color:var(--mute)}
-.chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{display:inline-flex;align-items:center;gap:4px;background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 10px;font-size:12px}
-.chip button{color:var(--mute);width:18px;height:18px;border-radius:50%;line-height:1}
-.chip button:hover{background:var(--s2)}
-.add{display:flex;gap:6px;margin-top:8px}
-.add input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
-.add button,.mini{background:var(--s2);border-radius:8px;padding:6px 12px;font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:2px;background:var(--s2);border-radius:3px;padding:1px 2px 1px 7px;font-size:12px}
+.chip button{color:var(--mute);width:16px;height:16px;line-height:1}
+.chip button:hover{color:var(--fg)}
+.add{display:flex;gap:4px;margin-top:8px}
+.add input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 8px}
+.add button,.mini{background:var(--s2);border-radius:3px;padding:5px 10px;font-size:12px}
+.mini:hover,.add button:hover{background:var(--line)}
 /* 목록 */
 .scanrow{display:flex;gap:6px;align-items:center;margin-top:8px}
-.date{background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;width:140px}
-.scan{background:var(--fg);color:var(--bg);border-radius:999px;padding:7px 18px;font-weight:500;font-size:13px}
+.date{background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 8px;width:140px}
+.scan{background:var(--acc);color:var(--accfg);border-radius:3px;padding:6px 20px;font-weight:700}
 .scan:disabled{opacity:.45;cursor:default}
-.post{padding:12px 12px 4px}
+.post{padding:12px 14px 6px}
 .post+.post{border-top:1px solid var(--line)}
 .pt{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px}
-.pt a{color:var(--fg);text-decoration:none;font-weight:700;line-height:1.35;font-size:13px}
-.star{color:var(--warn);margin-right:3px}
+.pt a{color:var(--fg);text-decoration:none;font-weight:700;line-height:1.35}
+.pt a:hover{text-decoration:underline}
+.tag{display:inline-block;font-size:11px;font-weight:400;border:1px solid currentColor;border-radius:2px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.tag.bait{color:var(--warn)}.tag.done{color:var(--ok)}
 .pm{font-size:11px;color:var(--mute)}
-.sel{font-size:11px;color:var(--acc);white-space:nowrap}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px}
-.ph{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--s2) center/cover;cursor:pointer}
+.sel{font-size:11px;color:var(--acc);white-space:nowrap;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:3px}
+.ph{position:relative;aspect-ratio:1;border-radius:2px;overflow:hidden;background:var(--s2) center/cover;cursor:pointer}
+.ph.dn{opacity:.45}
 .ph[data-cur=true]{outline:2px solid var(--fg);outline-offset:-2px}
 .ph[data-on=true]{box-shadow:inset 0 0 0 3px var(--acc)}
-.kind{position:absolute;left:4px;top:4px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);padding:0 5px;border-radius:99px}
-.ck{position:absolute;right:4px;bottom:4px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:grid;place-items:center;color:transparent;font-size:12px;font-weight:700}
+.kind{position:absolute;left:3px;top:3px;font-size:10px;color:#fff;background:rgba(0,0,0,.6);padding:0 4px;border-radius:2px}
+.dnm{position:absolute;left:3px;bottom:3px;font-size:10px;color:#fff;background:rgba(47,125,79,.9);padding:0 4px;border-radius:2px}
+.ck{position:absolute;right:3px;bottom:3px;width:20px;height:20px;border-radius:2px;border:1px solid #fff;background:rgba(0,0,0,.35);display:grid;place-items:center;color:transparent;font-size:12px;font-weight:700}
 .ph[data-on=true] .ck{background:var(--acc);border-color:var(--acc);color:var(--accfg)}
-.pb{display:flex;gap:12px;font-size:11px;margin:6px 0 8px}.pb button{color:var(--acc)}
+.pb{display:flex;gap:12px;font-size:12px;margin:6px 0 8px}.pb button{color:var(--acc)}.pb button:hover{text-decoration:underline}
 .lks{font-size:11px;color:var(--mute);margin:2px 0 8px;overflow-wrap:anywhere}
 .empty{padding:60px 14px;text-align:center;color:var(--mute)}
 /* 뷰어 */
-.view{display:flex;flex-direction:column;height:100%;background:#000;position:relative}
+.view{display:flex;flex-direction:column;height:100%;position:relative}
 .stage{flex:1;min-height:0;display:grid;place-items:center;padding:12px}
-.stage video{max-width:100%;max-height:100%;border-radius:4px}
-.stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
-.vbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s1);border-top:1px solid var(--line)}
+.stage video,.stage img{max-width:100%;max-height:100%;object-fit:contain}
+.vbar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s1);border-top:1px solid var(--line)}
 .vbar .info{flex:1;min-width:0;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vbtn{background:var(--s2);border-radius:999px;padding:7px 14px;font-size:13px}
+.vbtn{background:var(--s2);border-radius:3px;padding:6px 14px}
 .vsel{background:var(--acc);color:var(--accfg);font-weight:700}
-.vph{color:#8a8780;font-size:13px}
-.arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:56px;color:#fff;background:rgba(255,255,255,.12);border-radius:10px;font-size:20px}
-.arrow.l{left:10px}.arrow.r{right:10px}
-/* 글쓰기 (DC 글쓰기 화면 모양) */
-.w{background:#fff;color:#222;min-height:100%;font-family:"Malgun Gothic","Noto Sans KR",sans-serif}
-.w .top{background:#3b4890;color:#fff;padding:12px 16px;font-weight:700;font-size:15px}
+.vph{color:#888;font-size:13px}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:52px;color:#fff;background:rgba(255,255,255,.14);border-radius:3px;font-size:20px}
+.arrow:hover{background:rgba(255,255,255,.25)}
+.arrow.l{left:8px}.arrow.r{right:8px}
+/* 글쓰기 */
+.w{min-height:100%}
+.w .top{background:var(--acc);color:var(--accfg);padding:11px 16px;font-weight:700;font-size:14px}
 .w .box{padding:14px 16px;display:grid;gap:12px}
-.w label{font-size:12px;color:#666;display:block;margin-bottom:3px}
-.w .ttl{display:flex;align-items:center;border:1px solid #ccc;padding:0 8px;gap:4px;background:#fff;min-height:38px;flex-wrap:wrap}
-.w .ttl span{color:#333;font-size:13px;white-space:nowrap}
-.w .ttl input{flex:1;min-width:80px;border:0;outline:0;font-size:14px;padding:8px 2px;background:none;color:#111}
-.w .ed{border:1px solid #ccc;min-height:220px;padding:10px;background:#fff;display:grid;gap:8px;align-content:start}
-.w .ed .lk{font-size:12px;color:#3b4890;overflow-wrap:anywhere;display:flex;gap:6px;align-items:flex-start}
+.w label{font-size:12px;color:var(--mute);display:block;margin-bottom:3px}
+.w .ttl{display:flex;align-items:center;border:1px solid var(--line);padding:0 8px;background:var(--s1);min-height:36px}
+.w .ttl input{flex:1;min-width:80px;border:0;outline:0;font-size:14px;padding:7px 2px;background:none}
+.w .ttl:focus-within{border-color:var(--acc)}
+.w .ed{border:1px solid var(--line);min-height:220px;padding:10px;display:grid;gap:8px;align-content:start}
+.w .ed .lk{font-size:12px;color:var(--acc);overflow-wrap:anywhere;display:flex;gap:6px;align-items:flex-start}
 .w .ed .lk input{margin-top:3px}
-.w .ed .im{display:flex;flex-wrap:wrap;gap:4px}
-.w .ed .im div{width:62px;height:62px;background:#eee center/cover;border:1px solid #ddd;position:relative;cursor:pointer}
-.w .ed .im div[data-c=true]{outline:2px solid #3b4890}
-.w .cn{display:flex;gap:14px;font-size:13px;color:#444;flex-wrap:wrap}
-.w .cn b{color:#111}.w .over{color:#c0392b;font-weight:700}
-.w .ev{width:160px;border:1px solid #ccc;padding:7px 8px;font-size:13px;background:#fff;color:#111}
-.w .btns{display:flex;gap:8px;justify-content:center;padding-top:4px}
-.w .reg{background:#3b4890;color:#fff;font-weight:700;padding:11px 44px;font-size:15px;border:1px solid #3b4890}
+.w .ed .im{display:flex;flex-wrap:wrap;gap:3px}
+.w .ed .im div{width:60px;height:60px;background:var(--s2) center/cover;position:relative;cursor:pointer}
+.w .ed .im div[data-c=true]{outline:2px solid var(--acc)}
+.w .cn{display:flex;gap:14px;color:var(--mute);flex-wrap:wrap}
+.w .cn b{color:var(--fg)}.w .over{color:var(--bad)!important;font-weight:700}
+.w .ev{width:160px;border:1px solid var(--line);padding:6px 8px;background:var(--s1)}
+.w .btns{display:flex;gap:6px;justify-content:center;padding-top:2px}
+.w .reg,.reg{background:var(--acc);color:var(--accfg);font-weight:700;padding:9px 40px;font-size:14px;border-radius:3px}
 .w .reg:disabled{opacity:.4;cursor:default}
-.w .cx{background:#fff;color:#333;border:1px solid #ccc;padding:11px 22px;font-size:14px}
-.w .st{font-size:12px;color:#666;text-align:center;min-height:18px}
-.w .pv{font-size:11px;color:#888;margin-top:4px;overflow-wrap:anywhere}
+.w .cx,.cx{background:var(--s1);color:var(--fg);border:1px solid var(--line);padding:9px 18px;border-radius:3px}
+.w .st{font-size:12px;color:var(--mute);text-align:center;min-height:18px}
 .opts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--mute)}
-.opts input{width:58px;background:var(--s1);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12px}
-.stop{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--warn)}
-.gl{display:flex;justify-content:space-between;font-size:12px;margin:8px 0 4px}
-.gauge{height:6px;border-radius:99px;background:var(--s2);overflow:hidden}
-.gauge i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .8s linear}
-.w .gl{color:#444}.w .gauge{background:#e3e3e3}.w .gauge i{background:#3b4890}
+.opts input{width:56px;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:3px 6px}
+.stop{border:1px solid var(--line);border-radius:3px;padding:5px 12px;color:var(--warn)}
+.gl{display:flex;justify-content:space-between;font-size:12px;margin:8px 0 4px;color:var(--mute)}
+.gauge{height:4px;background:var(--s2);overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--acc);transition:width .8s linear}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
-.sheet>div{background:#fff;color:#222;width:100%;max-width:420px;padding:20px;display:grid;gap:12px;border-radius:4px}
-.sheet h2{margin:0;font-size:17px}.sheet p{margin:0;font-size:14px;overflow-wrap:anywhere}
-.sheet .row{display:flex;gap:8px;justify-content:flex-end}
-.setup{max-width:520px;margin:40px auto;padding:20px;background:var(--s1);border-radius:16px;display:grid;gap:12px}
-.setup ol{margin:0;padding-left:20px;font-size:13px;color:var(--mute)}
-.setup input{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.setup .go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:999px;padding:11px}
+.sheet>div{background:var(--s1);color:var(--fg);width:100%;max-width:400px;padding:20px;display:grid;gap:12px;border-radius:3px;border:1px solid var(--line)}
+.sheet h2{margin:0;font-size:16px}.sheet p{margin:0;overflow-wrap:anywhere}
+.sheet .row{display:flex;gap:6px;justify-content:flex-end}
+.setup{max-width:480px;margin:48px auto;padding:20px;background:var(--s1);border:1px solid var(--line);border-radius:3px;display:grid;gap:12px}
+.setup ol{margin:0;padding-left:20px;color:var(--mute)}
+.setup input{background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:9px 10px}
+.setup .go{background:var(--acc);color:var(--accfg);font-weight:700;border-radius:3px;padding:10px}
+/* 기록 */
+.hi{padding:10px 14px;border-bottom:1px solid var(--line)}
+.hi b{display:block;font-weight:700;overflow-wrap:anywhere}
+.hi .pm{margin-top:2px}
+.ok{color:var(--ok)}.ng{color:var(--bad)}
+.hs{padding:10px 14px 4px;font-size:12px;color:var(--mute);font-weight:700}
 </style></head><body>
 <div id="app"></div>
 <div id="sheet"></div>
@@ -122,8 +135,15 @@ const okId=s=>/^\d{1,10}_[vm]?\d{1,3}$/.test(s),okUrl=s=>/^https?:\/\/[^\s"'<>`]
 const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
 const DEF={include:"리센느,센느,센둥이,RESCENE,리브,원이,미나미,메이,제나,대장,원짱,원쨩,냠이,미남이,여보,리부,메갓,까엉,펄스,PULSE,20kg,06즈,막내즈,mz즈".split(","),exclude:"버블,디콘,dccon,밈".split(","),other:"베니,쿠미,아이브,뉴진스,에스파,르세라핌,아일릿,아이들,엔믹스,트와이스,있지,스테이씨,키오프,베이비몬스터,피프티,하투하,이즈나,유니스,빌리,아이유,블랙핑크,fromis,프로미스,엔하이픈,보넥도,투바투,라이즈".split(","),bait:"비하인드,떴다,떳다".split(",")};
 const KWN={include:"포함 키워드 (제목·본문에 하나라도 있어야 수집)",exclude:"제외 키워드 (제목에 있으면 건너뜀)",other:"다른 그룹 (제목에 있으면 건너뜀)",bait:"떡밥 키워드 (★ 표시)"};
-let token="",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
+let ltab=LS.get("ltab")==="hist"?"hist":"kw",srv=null,token="",idx=null,sel=[],linkOff=new Set(),status="",busy=false,cur=null,tab="list";
 let kw=(()=>{try{const x=JSON.parse(LS.get("kw"));if(x&&x.include)return x}catch(e){}return null})();
+const HIST=()=>{try{const x=JSON.parse(LS.get("hist"));return Array.isArray(x)?x:[]}catch(e){return[]}};
+const doneNos=()=>new Set(HIST().filter(h=>h.res==="success").flatMap(h=>h.nos||[]));
+const doneIds=()=>new Set(HIST().filter(h=>h.res==="success").flatMap(h=>h.ids||[]));
+const fmtT=t=>{const d=new Date(t);return isNaN(d)?"":d.toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})};
+const RES={success:["완료","ok"],cancelled:["취소","ng"],failure:["실패","ng"],timeout:["시간 초과","ng"]};
+const ltabs=()=>`<div class="tabs"><button data-lt="kw" class="${ltab==="kw"?"on":""}">키워드</button><button data-lt="hist" class="${ltab==="hist"?"on":""}">업로드 기록</button></div>`;
+const bindTabs=()=>$$("[data-lt]").forEach(b=>b.onclick=()=>{ltab=b.dataset.lt;LS.set("ltab",ltab);rKw()});
 const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 let sinceISO=kstDay(),evdate=kstDay(),topic="",pages=+LS.get("pg")||12,maxposts=+LS.get("mp")||0;
 const KW=()=>kw||(idx&&idx.kw)||DEF;
@@ -160,16 +180,18 @@ function build(){
    <section class="pane ${tab==="list"?"on":""}" id="pList"></section>
    <section class="pane ${tab==="view"?"on":""}" id="pView"></section>
    <section class="pane ${tab==="write"?"on":""}" id="pWrite"></section>
-   <nav class="nav">${[["kw","키워드"],["list","목록"],["view","원본"],["write","글쓰기"]].map(([k,n])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${n}</button>`).join("")}</nav>`;
+   <nav class="nav">${[["kw","키워드·기록"],["list","목록"],["view","원본"],["write","글쓰기"]].map(([k,n])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${n}</button>`).join("")}</nav>`;
   $$(".nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;$$(".pane").forEach(p=>p.classList.toggle("on",p.id==="p"+tab[0].toUpperCase()+tab.slice(1)));$$(".nav button").forEach(x=>x.classList.toggle("on",x===b))});
   rKw();rList();rView();rWrite();
 }
 function rKw(){
+  if(ltab==="hist")return rHist();
   const k=KW();
-  $("#pKw").innerHTML=`<div class="hd"><h2>키워드</h2><div class="sub">스캔할 때 적용됩니다 · 이 기기에 저장</div></div><div class="pad">`+
+  $("#pKw").innerHTML=ltabs()+`<div class="pad"><div class="sub" style="padding:8px 0 2px">스캔할 때 적용됩니다 · 이 기기에 저장</div>`+
    Object.keys(KWN).map(n=>`<details class="kd" data-k="${n}" ${LS.get("kwopen_"+n)==="1"?"open":""}><summary>${KWN[n].split(" (")[0]} <span class="kc">${(k[n]||[]).length}</span></summary><div class="sub" style="margin:2px 0 6px">${KWN[n].includes("(")?KWN[n].slice(KWN[n].indexOf("(")):""}</div><div class="chips">${(k[n]||[]).map((w,i)=>`<span class="chip">${esc(w)}<button data-del="${n}:${i}" aria-label="삭제">×</button></span>`).join("")}</div>
    <div class="add"><input data-in="${n}" placeholder="추가" maxlength="40"><button data-add="${n}">추가</button></div></details>`).join("")+
    `<div style="margin-top:18px"><button class="mini" id="kwreset">기본값으로</button></div></div>`;
+  bindTabs();
   $$(".kd").forEach(d=>d.addEventListener("toggle",()=>LS.set("kwopen_"+d.dataset.k,d.open?"1":"0")));
   const save=()=>{LS.set("kw",JSON.stringify(kw));rKw()};
   const cur_=()=>kw||(kw=JSON.parse(JSON.stringify(KW())));
@@ -179,16 +201,32 @@ function rKw(){
   $$("[data-in]").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")add(i.dataset.in)});
   $("#kwreset").onclick=()=>{kw=null;LS.del("kw");rKw()};
 }
+async function loadSrv(){
+  try{const r=await(await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/runs?event=workflow_dispatch&per_page=30`)).json();
+    srv=(r.workflow_runs||[]).map(x=>({t:x.created_at,title:String(x.display_title||"").slice(0,80),res:x.status==="completed"?x.conclusion:"진행 중"}))}catch(e){srv=[]}
+  if(ltab==="hist")rHist();
+}
+function rHist(){
+  const H=HIST().slice().reverse();
+  $("#pKw").innerHTML=ltabs()+`<div class="hs">이 기기에서 올린 글 ${H.length}건</div>`+
+   (H.length?H.map(h=>{const r=RES[h.res]||[h.res,"ng"];return `<div class="hi"><b>${esc(h.title)}</b><div class="pm">${esc(fmtT(h.t))} · <span class="${r[1]}">${esc(r[0])}</span> · 사진 ${h.i||0} · 움짤 ${h.c||0} · 링크 ${h.l||0} · 원글 ${(h.nos||[]).length}개</div></div>`}).join(""):'<div class="empty" style="padding:24px 14px">아직 기록이 없습니다</div>')+
+   `<div class="hs" style="margin-top:6px">GitHub 실행 기록 (모든 기기)</div>`+
+   (srv===null?'<div class="empty" style="padding:16px 14px">불러오는 중…</div>':srv.length?srv.map(h=>{const r=RES[h.res]||[h.res,"sub"];return `<div class="hi"><b>${esc(h.title)}</b><div class="pm">${esc(fmtT(h.t))} · <span class="${r[1]}">${esc(r[0])}</span></div></div>`}).join(""):'<div class="empty" style="padding:16px 14px">기록 없음</div>')+
+   `<div class="pad"><button class="mini" id="hclr">이 기기 기록 지우기</button></div>`;
+  bindTabs();
+  $("#hclr").onclick=()=>{if(confirm("이 기기의 업로드 기록을 지울까요? 목록의 '업로드함' 표시도 사라집니다.")){LS.del("hist");rHist();rList()}};
+  if(srv===null)loadSrv();
+}
 function rList(){
-  const P=$("#pList");
-  P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" style="color:var(--mute);font-size:11px;text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
+  const P=$("#pList"),dN=doneNos(),dI=doneIds();
+  P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" class="sub" style="text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
    <div class="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div>
    <div class="scanrow"><input class="date" type="date" id="since" value="${esc(sinceISO)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button>${prog&&prog.kind==="scan"?'<button class="stop" id="stop">취소</button>':""}</div>
    <div class="opts"><label>페이지 <input type="number" id="pg" min="1" max="30" value="${pages}"></label><label>글 최대 <input type="number" id="mp" min="0" max="300" value="${maxposts}" title="0이면 제한 없음"></label>
      <button class="mini" data-pre="3,20">빠르게</button><button class="mini" data-pre="6,40">보통</button><button class="mini" data-pre="12,0">전체</button></div>
    <div class="sub" id="st" style="margin-top:6px">${esc(status)}</div><div id="gS"></div></div>`+
-   (idx&&idx.posts.length?idx.posts.map(p=>`<div class="post" data-no="${p.no}"><div class="pt"><div><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="star">★</span>':""}${esc(p.title)}</a><div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel"></span></div>
-    ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span><span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
+   (idx&&idx.posts.length?idx.posts.map(p=>`<div class="post" data-no="${p.no}"><div class="pt"><div><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="tag bait">떡밥</span>':""}${dN.has(p.no)?'<span class="tag done">업로드함</span>':""}${esc(p.title)}</a><div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 파일 ${p.files.length}</div></div><span class="sel"></span></div>
+    ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph${dI.has(f.id)?" dn":""}" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span>${dI.has(f.id)?'<span class="dnm">업로드함</span>':""}<span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
     <div class="pb"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="pm">파일 없음 (링크만)</div>'}
     ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
   $("#logout").onclick=()=>{LS.del("tk");LS.del("tke");token="";idx=null;start()};
@@ -230,7 +268,7 @@ function rWrite(){
    <div><label>행사 날짜</label><input class="ev" type="date" id="ev" value="${esc(evdate)}"></div>
    <div><label>본문</label><div class="ed">
      ${links.map(l=>`<div class="lk"><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l)}</span></div>`).join("")}
-     ${ch.length?`<div class="im">${ch.map(f=>`<div data-v="${f.id}" data-c="${f.id===cur}" style="background-image:url('${tUrl(f)}')" title="${esc(f.id)}"></div>`).join("")}</div>`:`<div style="color:#999;font-size:13px">선택한 사진·움짤이 여기에 순서대로 들어갑니다</div>`}
+     ${ch.length?`<div class="im">${ch.map(f=>`<div data-v="${f.id}" data-c="${f.id===cur}" style="background-image:url('${tUrl(f)}')" title="${esc(f.id)}"></div>`).join("")}</div>`:`<div class="sub">선택한 사진·움짤이 여기에 순서대로 들어갑니다</div>`}
    </div></div>
    <div class="cn"><span>사진 <b class="${k.i>30?"over":""}">${k.i}</b>/30</span><span>움짤 <b class="${k.c>14?"over":""}">${k.c}</b>/14</span><span>합계 <b class="${tot>50?"over":""}">${tot}</b>/50</span></div>
    <div class="btns"><button class="reg" id="up" ${tot&&topic.trim()&&!busy&&idx?"":"disabled"}>등록</button><button class="cx" id="clr">선택 비우기</button></div>
@@ -260,7 +298,7 @@ setInterval(drawGauge,1000);
 function setStatus(s){status=s;const a=$("#st");if(a)a.textContent=s;const b=$(".w .st");if(b)b.textContent=s}
 function confirmUp(){
   const k=cnt(),L=chosenLinks();
-  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 등록할까요?</h2><p><b>${esc(topic.trim())}</b></p><p style="color:#666">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="cx" id="no" style="background:#fff;border:1px solid #ccc;padding:9px 18px">취소</button><button class="reg" id="yes" style="background:#3b4890;color:#fff;border:0;padding:9px 26px;font-weight:700">등록</button></div></div></div>`;
+  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 등록할까요?</h2><p><b>${esc(topic.trim())}</b></p><p class="sub">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="cx" id="no">취소</button><button class="reg" id="yes">등록</button></div></div></div>`;
   $("#no").onclick=()=>$("#sheet").innerHTML="";
   $("#yes").onclick=()=>{$("#sheet").innerHTML="";doUpload()};
 }
@@ -297,14 +335,15 @@ async function doUpload(){
   if(!/^[^\/\\\n\r"`$]{1,50}$/.test(topic.trim())||topic.includes("..")){setStatus("주제에 쓸 수 없는 문자가 있거나 너무 깁니다");return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(evdate)){setStatus("행사 날짜는 YYYY-MM-DD 형식이어야 합니다");return}
   busy=true;prog={kind:"up",label:"업로드 중",t0:Date.now(),exp:+LS.get("dUp")||300,step:0};rWrite();setStatus("업로드를 요청했습니다");drawGauge();
-  try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))];
+  try{const t0=Date.now(),ch=chosen(),nos=[...new Set(ch.map(f=>f.no))],snap={title:topic.trim(),nos,ids:ch.map(f=>f.id),c:k.c,i:k.i,l:chosenLinks().length};
     await gh(`/repos/${REPO}/actions/workflows/post-topic.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:"main",inputs:{topic:topic.trim(),posts:nos.join(","),links:chosenLinks().join(" "),include:ch.map(f=>f.id).join(","),evdate,dry:"false"}})});
     const c=await waitRun("post-topic.yml",t0,"업로드");
     if(c==="success")LS.set("dUp",String(Math.round((Date.now()-t0)/1000)));
+    {const h=HIST();h.push({...snap,t:Date.now(),res:c});LS.set("hist",JSON.stringify(h.slice(-200)));srv=null}
     status=c==="success"?"업로드 완료":c==="cancelled"?"업로드를 취소했습니다":"업로드 실패 ("+c+")";
     if(c==="success")sel=[];
   }catch(e){status="오류: "+e.message}
-  busy=false;prog=null;sync();setStatus(status);
+  busy=false;prog=null;sync();setStatus(status);rKw();rList();
 }
 async function load(){
   try{const r=await gh(`/repos/${REPO}/contents/index.json?ref=review-scan`,{headers:{Accept:"application/vnd.github.raw+json"}});idx=clean(await r.json());
