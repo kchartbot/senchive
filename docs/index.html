@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://raw.githubusercontent.com data:; media-src https://raw.githubusercontent.com; connect-src https://api.github.com; base-uri 'none'; form-action 'none'">
 <title>센카이브 검수</title>
 <style>
 :root{--bg:#f1f0ee;--s1:#fff;--s2:#ebeae7;--fg:#18171a;--mute:#86837c;--line:#e2e0db;--acc:#e0527a;--accfg:#fff;--warn:#c47a10;color-scheme:light}
@@ -64,6 +64,7 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 /* 뷰어 */
 .view{display:flex;flex-direction:column;height:100%;background:#000;position:relative}
 .stage{flex:1;min-height:0;display:grid;place-items:center;padding:12px}
+.stage video{max-width:100%;max-height:100%;border-radius:4px}
 .stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
 .vbar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s1);border-top:1px solid var(--line)}
 .vbar .info{flex:1;min-width:0;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -127,6 +128,7 @@ async function gh(path,opt={}){
 }
 const RAW=`https://raw.githubusercontent.com/${REPO}/review-scan`;
 const tUrl=f=>`${RAW}/t/${f.id}.jpg?v=${idx?.run||""}`;
+const isVid=f=>f.o==="mp4";
 const mUrl=f=>f.o?`${RAW}/m/${f.id}.${f.o}?v=${idx?.run||""}`:`${RAW}/m/${f.id}.jpg?v=${idx?.run||""}`;
 const all=()=>idx?idx.posts.flatMap(p=>p.files.map(f=>({...f,no:p.no,ptitle:p.title,purl:p.url}))):[];
 const byId=id=>all().find(f=>f.id===id);
@@ -139,7 +141,7 @@ function clean(x){
   const posts=(Array.isArray(x?.posts)?x.posts:[]).map(p=>({no:String(p.no).replace(/\D/g,""),bait:!!p.bait,title:String(p.title||"").slice(0,200),when:String(p.when||"").slice(0,20),head:String(p.head||"").slice(0,20),rec:+p.rec||0,
     url:/^https:\/\/gall\.dcinside\.com\//.test(String(p.url||""))&&okUrl(p.url)?p.url:"#",
     links:(Array.isArray(p.links)?p.links:[]).map(String).filter(okUrl).slice(0,20),
-    files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img",o:/^(gif|webp)$/.test(f.o)?f.o:""})).slice(0,80)})).filter(p=>p.no);
+    files:(Array.isArray(p.files)?p.files:[]).filter(f=>okId(String(f.id))).map(f=>({id:String(f.id),t:f.t==="clip"?"clip":"img",o:/^(gif|webp|mp4)$/.test(f.o)?f.o:""})).slice(0,80)})).filter(p=>p.no);
   const k=x?.kw,cl=a=>(Array.isArray(a)?a:[]).map(v=>String(v).slice(0,40)).slice(0,300);
   return {generated:String(x?.generated||"").slice(0,30),run:String(x?.run||"").replace(/\D/g,""),posts,kw:k?{include:cl(k.include),exclude:cl(k.exclude),other:cl(k.other),bait:cl(k.bait)}:null};
 }
@@ -199,10 +201,10 @@ function rView(){
   const P=$("#pView"),L=all(),i=L.findIndex(f=>f.id===cur),f=L[i];
   if(!f){P.innerHTML=`<div class="view"><div class="stage"><div class="vph">왼쪽 목록에서 사진을 누르면 원본이 여기에 보입니다</div></div></div>`;return}
   const on=sel.includes(f.id);
-  P.innerHTML=`<div class="view"><div class="stage"><img id="vimg" src="${mUrl(f)}" alt="${esc(f.id)}"></div>
+  P.innerHTML=`<div class="view"><div class="stage">${isVid(f)?`<video id="vvid" src="${mUrl(f)}" poster="${tUrl(f)}" autoplay loop muted playsinline controls></video>`:`<img id="vimg" src="${mUrl(f)}" alt="${esc(f.id)}">`}</div>
    <button class="arrow l" id="pv" aria-label="이전">‹</button><button class="arrow r" id="nx" aria-label="다음">›</button>
    <div class="vbar"><div class="info">${i+1}/${L.length} · ${f.t==="clip"?"움짤":"사진"} · ${esc(f.ptitle)}</div><button class="vbtn ${on?"":"vsel"}" id="vt">${on?"선택 해제":"선택"}</button></div></div>`;
-  $("#vimg").onerror=function(){this.onerror=null;this.src=tUrl(f)};
+  if($("#vimg"))$("#vimg").onerror=function(){this.onerror=null;this.src=tUrl(f)};
   $("#vt").onclick=()=>toggle(f.id);
   $("#pv").onclick=()=>show(L[(i-1+L.length)%L.length].id);$("#nx").onclick=()=>show(L[(i+1)%L.length].id);
 }
@@ -211,7 +213,7 @@ addEventListener("keydown",e=>{if(/INPUT|SELECT/.test(document.activeElement?.ta
 function rWrite(){
   const P=$("#pWrite"),k=cnt(),tot=k.c+k.i,ch=chosen(),links=idx?[...new Set(idx.posts.filter(p=>new Set(ch.map(f=>f.no)).has(p.no)).flatMap(p=>p.links))]:[];
   P.innerHTML=`<div class="w"><div class="top">글쓰기</div><div class="box">
-   <div><label>제목</label><div class="ttl"><input id="topic" placeholder="제목을 입력하세요" value="${esc(topic)}" maxlength="50"></div><div class="pv" id="pvt">등록될 제목: ${esc(titleOf())}</div></div>
+   <div><label>제목</label><div class="ttl"><input id="topic" placeholder="제목을 입력하세요" value="${esc(topic)}" maxlength="50"></div></div>
    <div><label>행사 날짜</label><input class="ev" id="ev" value="${esc(evdate)}"></div>
    <div><label>본문</label><div class="ed">
      ${links.map(l=>`<div class="lk"><input type="checkbox" data-link="${esc(l)}" ${linkOff.has(l)?"":"checked"}><span>${esc(l)}</span></div>`).join("")}
@@ -220,7 +222,7 @@ function rWrite(){
    <div class="cn"><span>사진 <b class="${k.i>30?"over":""}">${k.i}</b>/30</span><span>움짤 <b class="${k.c>14?"over":""}">${k.c}</b>/14</span><span>합계 <b class="${tot>50?"over":""}">${tot}</b>/50</span></div>
    <div class="btns"><button class="reg" id="up" ${tot&&topic.trim()&&!busy&&idx?"":"disabled"}>등록</button><button class="cx" id="clr">선택 비우기</button></div>
    <div class="st">${esc(status)}</div></div></div>`;
-  $("#topic").oninput=e=>{topic=e.target.value;$("#pvt").textContent="등록될 제목: "+titleOf();$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
+  $("#topic").oninput=e=>{topic=e.target.value;$("#up").disabled=!(tot&&topic.trim()&&!busy&&idx)};
   $("#topic").onchange=()=>rWrite();
   $("#ev").onchange=e=>{evdate=e.target.value.trim();rWrite()};
   $$("[data-link]").forEach(c=>c.onchange=()=>{c.checked?linkOff.delete(c.dataset.link):linkOff.add(c.dataset.link);rWrite()});
@@ -231,7 +233,7 @@ function rWrite(){
 function setStatus(s){status=s;const a=$("#st");if(a)a.textContent=s;const b=$(".w .st");if(b)b.textContent=s}
 function confirmUp(){
   const k=cnt(),L=chosenLinks();
-  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 등록할까요?</h2><p><b>${esc(titleOf())}</b></p><p style="color:#666">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="cx" id="no" style="background:#fff;border:1px solid #ccc;padding:9px 18px">취소</button><button class="reg" id="yes" style="background:#3b4890;color:#fff;border:0;padding:9px 26px;font-weight:700">등록</button></div></div></div>`;
+  $("#sheet").innerHTML=`<div class="sheet"><div><h2>이대로 등록할까요?</h2><p><b>${esc(topic.trim())}</b></p><p style="color:#666">사진 ${k.i}개 · 움짤 ${k.c}개 · 링크 ${L.length}개</p><div class="row"><button class="cx" id="no" style="background:#fff;border:1px solid #ccc;padding:9px 18px">취소</button><button class="reg" id="yes" style="background:#3b4890;color:#fff;border:0;padding:9px 26px;font-weight:700">등록</button></div></div></div>`;
   $("#no").onclick=()=>$("#sheet").innerHTML="";
   $("#yes").onclick=()=>{$("#sheet").innerHTML="";doUpload()};
 }
