@@ -93,9 +93,11 @@ jobs:
           git add -A && git commit -qm review
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push -qf origin review-data
+      # 실패 화면은 로그인된 계정 화면이 찍힐 수 있어 비공개 저장소에서만 보관한다
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure() && github.event.repository.private
         with:
           name: post-topic-out
           path: out/*.png
           if-no-files-found: ignore
+          retention-days: 2
