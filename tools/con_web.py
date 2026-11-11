@@ -21,8 +21,8 @@ button{background:#5b6ee1;border-color:#5b6ee1;cursor:pointer}button:disabled{op
 <h2>콘 만들기</h2>
 <div class=row><input id=url placeholder="유튜브 링크" style="flex:1;min-width:240px"></div>
 <div id=drop>또는 mp4 파일을 여기에 끌어다 놓기 (클릭해서 선택)<input id=file type=file accept="video/*" hidden></div>
-<div class=row>개수 <input id=count type=number value=8 style=width:60px> 길이(초) <input id=length type=number step=.5 value=2.5 style=width:60px>
-크기(px) <input id=size type=number value=200 style=width:70px> 최대 KB <input id=maxkb type=number value=300 style=width:70px>
+<div class=row>개수 <input id=count type=number value=10 style=width:60px> 길이(초) <input id=length type=number step=.5 value=2.5 style=width:60px>
+크기(px) <input id=size type=number value=200 style=width:70px> 최대 KB <input id=maxkb type=number value=500 style=width:70px>
 문구 <select id=text><option value=auto>자동</option><option value=subtitle>자막만</option><option value=phrase>고정 문구</option><option value=none>없음</option></select>
 시작 <input id=start type=number value=0 style=width:60px>초 끝 <input id=end type=number value=0 style=width:60px>초</div>
 <div class=row><button id=go>만들기</button><a id=zip style=display:none href=# download>zip 받기</a></div>
@@ -38,7 +38,7 @@ $('go').onclick=async()=>{
   if(picked){q.set('name',picked.name);init={method:'POST',body:picked};}else if(url.value.trim()){q.set('url',url.value.trim());init={method:'POST',body:''};}else{$('log').textContent='링크나 파일을 넣어주세요';return}
   $('go').disabled=true;$('g').innerHTML='';$('zip').style.display='none';$('log').textContent='만드는 중… (영상 길이에 따라 1~3분)';
   try{const r=await fetch('/make?'+q,init);const j=await r.json();$('log').textContent=j.log||'';
-    if(j.items){$('g').innerHTML=j.items.map(x=>`<div class=c><img src="/f/${j.id}/${x.file}" width=${x.size}>${x.file} · ${x.kb}KB<br>${x.caption||''}</div>`).join('');
+    if(j.items){$('g').innerHTML=j.items.map(x=>`<div class=c><img src="/f/${j.id}/${x.file}" width=${x.size}>${x.file} · ${x.kb}KB<br>문구 ${x.caption||''}<br>알트 ${x.alt}</div>`).join('');
       $('zip').href=`/f/${j.id}/dccon.zip`;$('zip').style.display=''}}
   catch(e){$('log').textContent='오류: '+e}$('go').disabled=false};
 </script>"""
@@ -79,8 +79,8 @@ class H(BaseHTTPRequestHandler):
                 with open(src, "wb") as f:
                     while remain > 0:
                         chunk = self.rfile.read(min(1 << 20, remain)); f.write(chunk); remain -= len(chunk)
-            cmd = [sys.executable, str(ROOT / "con_maker.py"), src, "--out", str(d / "o"), "--count", q.get("count", "8"), "--length", q.get("length", "2.5"),
-                   "--size", q.get("size", "200"), "--max-kb", q.get("maxkb", "300"), "--text", q.get("text", "auto"),
+            cmd = [sys.executable, str(ROOT / "con_maker.py"), src, "--out", str(d / "o"), "--count", q.get("count", "10"), "--length", q.get("length", "2.5"),
+                   "--size", q.get("size", "200"), "--max-kb", q.get("maxkb", "500"), "--text", q.get("text", "auto"),
                    "--start", q.get("start", "0"), "--end", q.get("end", "0")]
             r = subprocess.run(cmd, capture_output=True, text=True)
             o = d / "o"

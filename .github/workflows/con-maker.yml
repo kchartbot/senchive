@@ -7,8 +7,8 @@ on:
         description: "유튜브 링크"
         required: true
       count:
-        description: "콘 개수"
-        default: "8"
+        description: "콘 개수(디시콘 등록은 10개 이상)"
+        default: "10"
       length:
         description: "콘 길이(초)"
         default: "2.5"
@@ -16,8 +16,8 @@ on:
         description: "가로=세로 픽셀"
         default: "200"
       maxkb:
-        description: "콘 하나 최대 KB"
-        default: "300"
+        description: "콘 하나 최대 KB(디시 규격 2MB 이하)"
+        default: "500"
       text:
         description: "문구 방식 auto/subtitle/phrase/none"
         default: "auto"

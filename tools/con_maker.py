@@ -142,6 +142,12 @@ def make_caption(i, t0, length, cues, mode, maxc):
     return random.Random(i * 7919 + int(t0)).choice(PHRASES), "phrase"
 
 
+def make_alt(cap, i):
+    """디시콘 알트값(연상 단어): 1~3자. 문구의 첫 단어를 3자로 줄이고, 없으면 고정 단어."""
+    w = re.sub(r"[^\w*^!~+]", "", (cap or "").split(" ")[0])[:3]
+    return w or random.Random(i).choice(["ㅋㅋ", "헉", "굿", "대박"])
+
+
 def face_center(v, t0, length, W, H):
     """구간 안에서 얼굴이 가장 크게 잡히는 위치를 중심으로 쓴다. 못 찾으면 정중앙."""
     try:
@@ -195,13 +201,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("src")
     ap.add_argument("--out", default="out/con")
-    ap.add_argument("--count", type=int, default=8, help="만들 콘 개수")
+    ap.add_argument("--count", type=int, default=10, help="만들 콘 개수(디시콘 등록은 최소 10개, 최대 200개)")
     ap.add_argument("--length", type=float, default=2.5, help="콘 하나의 길이(초)")
     ap.add_argument("--size", type=int, default=200, help="가로=세로 픽셀(디시 규격에 맞추기)")
-    ap.add_argument("--max-kb", type=int, default=300, help="콘 하나 최대 용량 KB(디시 규격에 맞추기)")
+    ap.add_argument("--max-kb", type=int, default=500, help="콘 하나 최대 용량 KB(디시 규격은 2MB 이하)")
     ap.add_argument("--fps", type=int, default=15)
     ap.add_argument("--text", default="auto", choices=["auto", "subtitle", "phrase", "claude", "none"], help="문구 방식")
-    ap.add_argument("--maxc", type=int, default=8, help="문구 최대 글자수")
+    ap.add_argument("--maxc", type=int, default=6, help="문구 최대 글자수")
     ap.add_argument("--font", default=None)
     ap.add_argument("--start", type=float, default=0, help="이 시각(초) 이후만 사용")
     ap.add_argument("--end", type=float, default=0, help="이 시각(초) 이전만 사용(0=끝까지)")
@@ -229,13 +235,16 @@ def main():
         center = face_center(v, t0, a.length, W, H)
         f = out / f"con_{i:02d}.gif"
         size, fps, colors = build(i, v, t0, a, W, H, center, cap if font else "", font, f)
-        items.append(dict(file=f.name, start=round(t0 + a.start, 1), caption=cap, caption_by=how, kb=round(f.stat().st_size / 1024), size=size, fps=fps))
+        items.append(dict(file=f.name, alt=make_alt(cap, i), start=round(t0 + a.start, 1), caption=cap, caption_by=how, kb=round(f.stat().st_size / 1024), size=size, fps=fps))
         print(f"  {f.name}  {t0 + a.start:6.1f}s  {items[-1]['kb']}KB  [{how}] {cap}")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(out / items[0]["file"]), "-frames:v", "1", str(out / "대표.png")])   # 대표 디시콘(png, 200x200 이상, 1MB 이하)
     (out / "index.json").write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
-    rows = "".join(f'<figure><img src="{x["file"]}" width="{x["size"]}"><figcaption>{x["file"]} · {x["kb"]}KB<br>{x["caption"]}</figcaption></figure>' for x in items)
+    rows = "".join(f'<figure><img src="{x["file"]}" width="{x["size"]}"><figcaption>{x["file"]} · {x["kb"]}KB<br>문구: {x["caption"]}<br>알트: {x["alt"]}</figcaption></figure>' for x in items)
     (out / "preview.html").write_text(f'<meta charset="utf-8"><style>body{{font:14px sans-serif;background:#222;color:#ddd}}figure{{display:inline-block;margin:8px;text-align:center}}</style>{rows}', encoding="utf-8")
     with zipfile.ZipFile(out / "dccon.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for x in items: z.write(out / x["file"], x["file"])
+        z.write(out / "대표.png", "대표.png")
+    if len(items) < 10: print("참고: 디시콘 등록은 10개 이상이 필요합니다. --count 를 늘리거나 영상을 더 긴 걸 쓰세요.")
     shutil.rmtree(work, ignore_errors=True)
     print("완료:", out)
 
