@@ -1,0 +1,87 @@
+name: con-maker
+run-name: 콘 ${{ inputs.url }}
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "유튜브 링크"
+        required: true
+      count:
+        description: "콘 개수"
+        default: "8"
+      length:
+        description: "콘 길이(초)"
+        default: "2.5"
+      size:
+        description: "가로=세로 픽셀"
+        default: "200"
+      maxkb:
+        description: "콘 하나 최대 KB"
+        default: "300"
+      text:
+        description: "문구 방식 auto/subtitle/phrase/none"
+        default: "auto"
+      start:
+        description: "시작 초(0=처음)"
+        default: "0"
+      end:
+        description: "끝 초(0=끝까지)"
+        default: "0"
+permissions:
+  contents: read
+concurrency:
+  group: con-maker
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 입력 검사
+        env:
+          U: ${{ inputs.url }}
+          N: ${{ inputs.count }}
+          L: ${{ inputs.length }}
+          S: ${{ inputs.size }}
+          K: ${{ inputs.maxkb }}
+          T: ${{ inputs.text }}
+          A: ${{ inputs.start }}
+          B: ${{ inputs.end }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          g = lambda k: os.environ[k]
+          bad = []
+          if not re.fullmatch(r"https?://(www\.|m\.)?(youtube\.com|youtu\.be)/[^\s\"'<>`$;&|]+", g("U")): bad.append("url(유튜브 링크만)")
+          for k, p in (("N", r"\d{1,2}"), ("L", r"\d{1,2}(\.\d)?"), ("S", r"\d{2,3}"), ("K", r"\d{2,4}"), ("A", r"\d{1,5}"), ("B", r"\d{1,5}")):
+              if not re.fullmatch(p, g(k)): bad.append(k)
+          if g("T") not in ("auto", "subtitle", "phrase", "none"): bad.append("text")
+          if bad: sys.exit("잘못된 입력: " + ",".join(bad))
+          PY
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 프로그램 준비
+        run: |
+          which ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+          sudo apt-get install -y -qq fonts-noto-cjk >/dev/null
+          pip install -q numpy pillow requests opencv-python-headless "yt-dlp[default]"
+      - name: 콘 만들기
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          U: ${{ inputs.url }}
+          N: ${{ inputs.count }}
+          L: ${{ inputs.length }}
+          S: ${{ inputs.size }}
+          K: ${{ inputs.maxkb }}
+          T: ${{ inputs.text }}
+          A: ${{ inputs.start }}
+          B: ${{ inputs.end }}
+        run: |
+          python tools/con_maker.py "$U" --out out/con --count "$N" --length "$L" --size "$S" --max-kb "$K" --text "$T" --start "$A" --end "$B"
+      # 영상 저작물이 들어 있으므로 공개 브랜치에 올리지 않고 하루만 보관한다
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dccon
+          path: out/con/*
+          retention-days: 1
