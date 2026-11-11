@@ -1,0 +1,31 @@
+name: build-report-exe
+run-name: 악성 댓글 신고서 exe 빌드
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-report-exe
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: exe 묶기
+        shell: pwsh
+        run: |
+          pip install pywebview pyinstaller
+          pyinstaller --noconfirm --onedir --name report --collect-all webview --hidden-import clr tools/report/rp_app.py
+          "report.exe 를 더블클릭하면 창이 열립니다. 설정 탭에서 YouTube API 키를 먼저 넣으세요. 모든 데이터는 이 폴더의 data 폴더에만 저장됩니다." | Out-File dist\report\읽어주세요.txt -Encoding utf8
+          Compress-Archive -Path dist\report -DestinationPath report-win.zip
+      - name: 배포 페이지에 올리기
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete report-latest --yes --cleanup-tag 2>$null
+          gh release create report-latest report-win.zip --title "악성 댓글 신고서 (Windows)" --notes "압축을 풀고 report.exe 를 실행하세요."
