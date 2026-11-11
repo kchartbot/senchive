@@ -1,0 +1,38 @@
+name: build-con-exe
+run-name: 콘 만들기 exe 빌드
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-con-exe
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 프로그램 준비
+        shell: pwsh
+        run: |
+          pip install numpy pillow requests opencv-python-headless yt-dlp pyinstaller
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ff
+          Copy-Item ff\*\bin\ffmpeg.exe, ff\*\bin\ffprobe.exe .
+      - name: exe 묶기
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --onedir --name dccon --collect-all yt_dlp --collect-data cv2 tools/con_app.py
+          Copy-Item ffmpeg.exe, ffprobe.exe dist\dccon\
+          "dccon.exe 를 더블클릭하면 브라우저에 콘 만들기 화면이 열립니다. 끄려면 검은 창을 닫으세요." | Out-File dist\dccon\읽어주세요.txt -Encoding utf8
+          Compress-Archive -Path dist\dccon -DestinationPath dccon-win.zip
+      - name: 배포 페이지에 올리기
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete con-latest --yes --cleanup-tag 2>$null
+          gh release create con-latest dccon-win.zip --title "콘 만들기 (Windows)" --notes "압축을 풀고 dccon.exe 를 실행하세요."

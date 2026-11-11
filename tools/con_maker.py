@@ -28,10 +28,11 @@ def fetch(src, work):
         p = Path(src)
         if not p.exists(): sys.exit("파일이 없습니다: " + src)
         return p, None
-    cmd = [sys.executable, "-m", "yt_dlp", "-f", "bv*[height<=720]+ba/b[height<=720]/b", "--merge-output-format", "mp4",
+    ytd = [sys.executable, "--ytdlp"] if getattr(sys, "frozen", False) else [sys.executable, "-m", "yt_dlp"]
+    cmd = ytd + ["-f", "bv*[height<=720]+ba/b[height<=720]/b", "--merge-output-format", "mp4",
            "--write-subs", "--write-auto-subs", "--sub-langs", "ko.*,ko", "--sub-format", "vtt", "--no-playlist",
            "-o", str(work / "src.%(ext)s"), src]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
     vids = sorted(work.glob("src.mp4")) or [p for p in work.glob("src.*") if p.suffix in (".mp4", ".mkv", ".webm")]
     if not vids:
         sys.exit("다운로드 실패(유튜브가 막았을 수 있음 - PC에서 실행하거나 mp4를 직접 쓰세요):\n" + (r.stderr or "")[-600:])
@@ -177,13 +178,13 @@ def render(v, t0, length, W, H, center, size, fps, colors, caption, font, out, f
     vf = f"crop={s}:{s}:{int(cx)}:{int(cy)},fps={fps},scale={size}:{size}:flags=lanczos"
     tmp = Path(tempfile.mkdtemp())
     if caption and font:
-        tf = tmp / "t.txt"; tf.write_text(caption, encoding="utf-8")
-        ff = font.replace("\\", "/").replace(":", "\\:")
-        vf += f",drawtext=fontfile='{ff}':textfile='{tf.as_posix()}':fontsize={fontsize}:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=h-text_h-{max(4, size // 20)}"
+        (tmp / "t.txt").write_text(caption, encoding="utf-8")
+        shutil.copy(font, tmp / ("f" + Path(font).suffix))
+        vf += f",drawtext=fontfile=f{Path(font).suffix}:textfile=t.txt:fontsize={fontsize}:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=h-text_h-{max(4, size // 20)}"
     pal = tmp / "p.png"
     base = ["ffmpeg", "-v", "error", "-y", "-ss", f"{t0:.2f}", "-t", f"{length:.2f}", "-i", str(v)]
-    run(base + ["-vf", f"{vf},palettegen=max_colors={colors}:stats_mode=diff", str(pal)])
-    run(base + ["-i", str(pal), "-lavfi", f"{vf}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4", "-loop", "0", str(out)])
+    run(base + ["-vf", f"{vf},palettegen=max_colors={colors}:stats_mode=diff", str(pal)], cwd=str(tmp))
+    run(base + ["-i", str(pal), "-lavfi", f"{vf}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4", "-loop", "0", str(Path(out).resolve())], cwd=str(tmp))
     shutil.rmtree(tmp, ignore_errors=True)
 
 

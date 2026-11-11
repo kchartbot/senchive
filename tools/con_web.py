@@ -1,6 +1,6 @@
 """내 PC 에서 쓰는 콘 만들기 화면. 실행: python tools/con_web.py  ->  브라우저에서 http://localhost:8765
 유튜브 링크를 붙여넣거나 mp4 를 끌어다 놓으면 콘 세트와 문구를 만들어 보여준다. 파일은 내 컴퓨터 밖으로 나가지 않는다."""
-import json, subprocess, sys, tempfile, threading, webbrowser
+import json, os, subprocess, sys, tempfile, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse, unquote
@@ -79,10 +79,11 @@ class H(BaseHTTPRequestHandler):
                 with open(src, "wb") as f:
                     while remain > 0:
                         chunk = self.rfile.read(min(1 << 20, remain)); f.write(chunk); remain -= len(chunk)
-            cmd = [sys.executable, str(ROOT / "con_maker.py"), src, "--out", str(d / "o"), "--count", q.get("count", "10"), "--length", q.get("length", "2.5"),
+            exe = [sys.executable, "--maker"] if getattr(sys, "frozen", False) else [sys.executable, str(ROOT / "con_maker.py")]
+            cmd = exe + [src, "--out", str(d / "o"), "--count", q.get("count", "10"), "--length", q.get("length", "2.5"),
                    "--size", q.get("size", "200"), "--max-kb", q.get("maxkb", "500"), "--text", q.get("text", "auto"),
                    "--start", q.get("start", "0"), "--end", q.get("end", "0")]
-            r = subprocess.run(cmd, capture_output=True, text=True)
+            r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
             o = d / "o"
             items = json.loads((o / "index.json").read_text(encoding="utf-8")) if (o / "index.json").exists() else None
             if items:
@@ -90,9 +91,13 @@ class H(BaseHTTPRequestHandler):
             self.send(200, json.dumps(dict(id=jid, items=items, log=(r.stdout + r.stderr)[-1500:]), ensure_ascii=False))
 
 
-if __name__ == "__main__":
+def main():
     srv = ThreadingHTTPServer(("127.0.0.1", 8765), H)
     print("http://localhost:8765 에서 열립니다 (끄려면 Ctrl+C)")
     try: webbrowser.open("http://localhost:8765")
     except Exception: pass
     srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
