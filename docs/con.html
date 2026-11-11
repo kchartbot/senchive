@@ -31,7 +31,7 @@ button.on{background:var(--ac);border-color:var(--ac)}
   grid-template-rows:auto minmax(300px,1fr) auto;grid-template-areas:"up gal opt" "vid prev list" "tl txt txt"}
  .box{display:flex;flex-direction:column;overflow:auto}
  #p-up #drop{flex:1;display:flex;align-items:center;justify-content:center;min-height:60px}
- #p-gal .gal{flex:1;min-height:0;max-height:none;align-content:start;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+ #p-gal .gal{flex:1;min-height:0;max-height:150px;align-content:start;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
  #p-vid #vwrap{flex:1;min-height:0}#p-vid #vwrap video{height:100%;max-height:none;object-fit:contain}
  #pvarea{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
  #pvwrap{width:min(100cqw,100cqh);max-width:none;margin:0}
@@ -71,7 +71,10 @@ video{width:100%;max-height:340px;background:#000;border-radius:8px;display:bloc
 .li.on{border-color:var(--ac)}.li img{width:56px;height:56px;border-radius:5px;background:#fff;object-fit:cover;flex:0 0 auto}
 .lt{font-size:12px;color:var(--dim);min-width:0;line-height:1.45}.lt b{color:var(--tx)}.lt span{color:var(--tx);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
 .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;max-height:260px;overflow:auto}
-.gi{background:var(--pan2);border:2px solid transparent;border-radius:8px;padding:4px;font-size:11px;color:var(--dim);text-align:center;cursor:pointer}.gi.on{border-color:var(--ac)}.gal .note{grid-column:1/-1}.gi{position:relative}.gx{position:absolute;top:2px;right:2px;padding:0 6px;line-height:1.5;font-size:12px;background:rgba(0,0,0,.65);border-color:transparent;border-radius:999px}.gx:hover{background:var(--rd)}
+.gi{background:var(--pan2);border:2px solid transparent;border-radius:8px;padding:4px;font-size:11px;color:var(--dim);text-align:center;cursor:pointer}.gi.on{border-color:var(--ac)}.gal .note{grid-column:1/-1}.two{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;flex:1;min-height:0}.col{display:flex;flex-direction:column;min-height:0;min-width:0}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+#liblist{flex:1;min-height:60px;max-height:112px;margin-top:6px}.lib{position:relative;padding-right:28px}.lib .lx{position:absolute;top:4px;right:4px;padding:0 6px;font-size:12px}.lib.cur{border-color:var(--ac)}
+.gi{position:relative}.gx{position:absolute;top:2px;right:2px;padding:0 6px;line-height:1.5;font-size:12px;background:rgba(0,0,0,.65);border-color:transparent;border-radius:999px}.gx:hover{background:var(--rd)}
 .gi img{width:100%;aspect-ratio:1;object-fit:cover;background:#fff;border-radius:4px;display:block;margin-bottom:3px}
 #msg{white-space:pre-wrap;font-size:12px;color:#8bb;margin:6px 0}
 </style>
@@ -87,9 +90,19 @@ video{width:100%;max-height:340px;background:#000;border-radius:8px;display:bloc
   <div id="ytmsg" class="note"></div>
 </section>
 
-<section class="box needs" id="p-gal">
-  <h3>만들어진 움짤 모음 <small id="galn"></small><button id="galclr" style="margin-left:auto;padding:2px 8px;font-size:12px" title="만든 움짤을 모두 지웁니다">모두 지우기</button></h3>
-  <div id="gal" class="gal"></div>
+<section class="box" id="p-gal">
+  <div class="two">
+    <div class="needs col" id="galwrap">
+      <h3>만들어진 움짤 모음 <small id="galn"></small><button id="galclr" style="margin-left:auto;padding:2px 8px;font-size:12px" title="만든 움짤을 모두 지웁니다">모두 지우기</button></h3>
+      <div id="gal" class="gal"></div>
+    </div>
+    <div class="col" id="libwrap">
+      <h3>보관함 <small id="libn"></small></h3>
+      <div class="row"><input id="libname" placeholder="저장할 이름" style="flex:1;min-width:90px"><button id="libsave" class="p" title="지금 작업(콘 목록·문구·모자이크·움짤)을 보관함에 저장">💾 저장</button></div>
+      <label class="note" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="libvid" checked>영상도 함께 저장 (끄면 용량↓, 불러와도 편집 불가)</label>
+      <div id="liblist" class="list"></div>
+    </div>
+  </div>
 </section>
 
 <section class="box needs" id="p-opt">
@@ -183,12 +196,13 @@ $("file").onchange=e=>e.target.files[0]&&load(e.target.files[0]);
 ["dragover","dragleave","drop"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.toggle("on",ev==="dragover");if(ev==="drop"&&e.dataTransfer.files[0])load(e.dataTransfer.files[0])}));
 $("yt").oninput=()=>{const v=$("yt").value;$("ytmsg").innerHTML=/youtu\.?be/.test(v)?
  "유튜브는 보안 때문에 브라우저가 영상을 직접 가져올 수 없습니다. <b>영상을 mp4로 받은 뒤 위에 올려주세요.</b><br>받는 방법: 콘 만들기 프로그램(dccon.exe) 또는 yt-dlp 로 링크를 mp4로 저장하면 됩니다.":""};
-function load(f){
+function load(f,restore){
+  S.file=f;S.mos=[];S.pid=restore?S.pid:null;S.noVideo=false;
   if(S.url)URL.revokeObjectURL(S.url);
   Object.values(S.res).forEach(r=>URL.revokeObjectURL(r.url));S.res={};
   S.url=URL.createObjectURL(f);vid.src=S.url;vid.load();
   vid.onloadedmetadata=()=>{S.dur=vid.duration;S.w=vid.videoWidth;S.h=vid.videoHeight;document.body.classList.add("loaded");
-    S.cons=[];S.sel=-1;newCon(0);estFps();buildStrip();vid.currentTime=0;S.zoom=1;$("tlzoom").value=1;tlin.style.width="100%";setView("edit");syncUI();placePh()};
+    S.cons=[];S.sel=-1;if(restore)restore();else newCon(0);estFps();buildStrip();vid.currentTime=0;S.zoom=1;$("tlzoom").value=1;tlin.style.width="100%";setView("edit");syncUI();placePh()};
   vid.onerror=()=>{$("ytmsg").textContent="이 영상을 열 수 없습니다. mp4(H.264), webm 형식인지 확인하세요."};
 }
 function estFps(){ // 잠깐 재생해 프레임 간격을 추정한다(끝나면 처음으로)
@@ -420,6 +434,51 @@ mo.addEventListener("pointerup",()=>{if(!md)return;const m=md;md=null;if(m.x2==n
   S.mos.push({x:Math.min(m.x,m.x2),y:Math.min(m.y,m.y2),w:Math.abs(m.x2-m.x),h:Math.abs(m.y2-m.y),cid:$("moscur").checked?cur().id:null});renderMos();draw()});
 new ResizeObserver(renderMos).observe($("vwrap"));vid.addEventListener("loadedmetadata",renderMos);
 const _sync=syncUI;syncUI=function(l){_sync(l);if(!l)renderMos()};
+
+/* ---------- 보관함 (이 브라우저 안에만 저장: IndexedDB) ---------- */
+const IDB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{const q=indexedDB.open("conlab",1);q.onupgradeneeded=()=>{q.result.createObjectStore("proj",{keyPath:"id"});q.result.createObjectStore("vid")};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))},
+  async tx(st,mode,fn){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t);t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error("저장 실패(용량 부족일 수 있음)"))})},
+  put(p,vb){return this.tx(["proj","vid"],"readwrite",t=>{t.objectStore("proj").put(p);if(vb)t.objectStore("vid").put(vb,p.id);else t.objectStore("vid").delete(p.id)})},
+  all(){return this.tx("proj","readonly",t=>t.objectStore("proj").getAll())},
+  vid(id){return this.tx("vid","readonly",t=>t.objectStore("vid").get(id))},
+  del(id){return this.tx(["proj","vid"],"readwrite",t=>{t.objectStore("proj").delete(id);t.objectStore("vid").delete(id)})}};
+const fmtMB=n=>n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024))+"KB";
+let LIB=[];
+async function libRefresh(){try{LIB=(await IDB.all()).sort((a,b)=>b.ts-a.ts)}catch(e){LIB=[];$("msg").textContent="보관함을 쓸 수 없습니다(시크릿 모드 등): "+e.message}renderLib()}
+function renderLib(){const box=$("liblist");box.innerHTML="";$("libn").textContent=LIB.length?LIB.length+"개":"";
+  if(!LIB.length){box.innerHTML='<div class="note">저장한 작업이 여기에 쌓입니다. 누르면 그대로 불러옵니다.</div>';return}
+  LIB.forEach(p=>{const d=document.createElement("div");d.className="li lib"+(p.id===S.pid?" cur":"");const im=document.createElement("img");
+    const g=Object.values(p.res||{})[0];im.src=g?URL.createObjectURL(new Blob([g.bytes],{type:"image/gif"})):(p.cons[0]&&p.cons[0].thumb)||BLANK;im.onload=()=>g&&URL.revokeObjectURL(im.src);
+    const t=document.createElement("div");t.className="lt";const n=Object.keys(p.res||{}).length,dt=new Date(p.ts);
+    t.innerHTML=`<b>${esc(p.name)}</b><span>콘 ${p.cons.length}개 · 움짤 ${n}개</span><small>${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")} · ${p.hasVideo?"영상 포함":"영상 없음"} · ${fmtMB(p.size||0)}</small>`;
+    const x=document.createElement("button");x.className="lx";x.textContent="✕";x.title="보관함에서 지우기";
+    x.onclick=async e=>{e.stopPropagation();if(!confirm(`'${p.name}'을(를) 보관함에서 지울까요?`))return;await IDB.del(p.id);if(S.pid===p.id)S.pid=null;libRefresh()};
+    d.append(im,t,x);d.onclick=()=>libLoad(p.id);box.appendChild(d)})}
+$("libsave").onclick=async()=>{
+  if(!S.cons.length){$("msg").textContent="저장할 작업이 없습니다. 영상을 먼저 올려주세요.";return}
+  const name=($("libname").value.trim()||(S.file&&S.file.name?S.file.name.replace(/\.[^.]+$/,""):"작업")+" "+new Date().toLocaleDateString("ko-KR")).slice(0,40),
+    old=LIB.find(p=>p.id===S.pid&&p.name===name),withV=$("libvid").checked&&!!S.file;
+  $("libsave").disabled=true;
+  try{const res={};let size=0;for(const[id,r]of Object.entries(S.res)){const png=r.rep?await new Promise(q=>r.rep.toBlob(q,"image/png")):null;res[id]={bytes:r.bytes,kb:r.kb,note:r.note,png};size+=r.bytes.length}
+    const p={id:old?old.id:rid(),name,ts:Date.now(),hasVideo:withV,vname:S.file?S.file.name:"",cons:JSON.parse(JSON.stringify(S.cons)),mos:S.mos,mbs:S.mbs,fps:$("fps").value,res,sel:S.sel,
+      opts:Object.fromEntries(OPT.map(i=>[i,$(i).value]))};
+    p.size=size+(withV?S.file.size:0);await IDB.put(p,withV?S.file:null);S.pid=p.id;await libRefresh();
+    $("msg").textContent=(old?"덮어써서 ":"")+`'${name}' 저장했습니다 (${fmtMB(p.size)}${withV?"":" · 영상 제외"}).`}
+  catch(e){$("msg").textContent="저장하지 못했습니다: "+e.message+" — 영상 포함을 끄면 용량이 크게 줄어듭니다."}
+  $("libsave").disabled=false};
+async function libLoad(id){
+  try{const p=LIB.find(x=>x.id===id)||(await IDB.all()).find(x=>x.id===id);if(!p)return;$("msg").textContent="불러오는 중…";
+    const vb=p.hasVideo?await IDB.vid(id):null;
+    const restore=async()=>{S.cons=JSON.parse(JSON.stringify(p.cons));S.sel=0;S.mos=p.mos||[];S.mbs=p.mbs||10;$("mosbs").value=S.mbs;S.pid=p.id;$("libname").value=p.name;
+      if(p.fps)$("fps").value=p.fps;Object.entries(p.opts||{}).forEach(([k,v])=>$(k).value=v);
+      for(const[cid,r]of Object.entries(p.res||{})){let rep=document.createElement("canvas");rep.width=rep.height=200;
+        if(r.png){try{const bm=await createImageBitmap(r.png);rep.width=bm.width;rep.height=bm.height;rep.getContext("2d").drawImage(bm,0,0)}catch(e){}}
+        S.res[cid]={url:URL.createObjectURL(new Blob([r.bytes],{type:"image/gif"})),kb:r.kb,bytes:r.bytes,rep,note:r.note}}
+      setView(Object.keys(S.res).length?"gif":"edit");syncUI();renderLib();$("msg").textContent=`'${p.name}'을(를) 불러왔습니다.`+(vb?"":" 영상이 없어 편집·다시 만들기는 안 되고, 움짤 보기와 저장은 됩니다.")};
+    if(vb){const f=new File([vb],p.vname||"video.mp4",{type:vb.type||"video/mp4"});S.pid=p.id;load(f,()=>{restore()})}
+    else{if(S.url)URL.revokeObjectURL(S.url);Object.values(S.res).forEach(r=>URL.revokeObjectURL(r.url));S.res={};S.url="";S.file=null;S.dur=S.w=S.h=0;S.noVideo=true;vid.removeAttribute("src");vid.load();document.body.classList.add("loaded");$("strip").innerHTML="";await restore()}
+  }catch(e){$("msg").textContent="불러오지 못했습니다: "+e.message}}
+libRefresh();
 
 /* ---------- 설정 기억 ---------- */
 const OPT=["osize","ofps","omax","ocol"];
