@@ -54,10 +54,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: 프로그램 준비
+        env:
+          CHANNEL: ${{ vars.BROWSER_CHANNEL || 'chrome' }}
+        run: |
+          which ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
           pip install requests beautifulsoup4 pillow playwright
-          playwright install --with-deps chromium
+          if [ "$CHANNEL" = "chrome" ] && command -v google-chrome >/dev/null; then
+            echo "BROWSER_CHANNEL=chrome" >> "$GITHUB_ENV"
+          else
+            playwright install --with-deps chromium
+          fi
       - name: 개념글에서 모으기
         env:
           TOPIC: ${{ inputs.topic }}
@@ -65,6 +72,7 @@ jobs:
           POSTS: ${{ inputs.posts }}
           INCLUDE: ${{ inputs.include }}
           GALLERIES: "mgallery:kpopcontent:"
+          DELAY: "0.6"
         run: python tools/compose.py
       - name: 올리기
         env:
@@ -83,18 +91,6 @@ jobs:
           DC_ID: ${{ secrets.DC_ID }}
           DC_PW: ${{ secrets.DC_PW }}
         run: python tools/post_compose.py
-      - name: 검토용으로 받은 파일 저장 (review-data 브랜치)
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          T: ${{ inputs.topic }}
-        run: |
-          mkdir -p /tmp/rv && cp -r "out/$T"/* /tmp/rv/ 2>/dev/null || true
-          cd /tmp/rv && git init -q -b review-data
-          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A && git commit -qm review
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git push -qf origin review-data
       # 실패 화면은 로그인된 계정 화면이 찍힐 수 있어 비공개 저장소에서만 보관한다
       - uses: actions/upload-artifact@v4
         if: failure() && github.event.repository.private

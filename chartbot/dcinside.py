@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 DEFAULT_SELECTORS = {
@@ -185,7 +186,7 @@ class DcUploader:
 
     def _context(self, p, headless):
         return p.chromium.launch_persistent_context(
-            self.profile_dir, headless=headless, args=CHROME_ARGS, user_agent=UA, locale="ko-KR", viewport={"width": 1280, "height": 900}
+            self.profile_dir, headless=headless, args=CHROME_ARGS, channel=os.environ.get("BROWSER_CHANNEL") or None, user_agent=UA, locale="ko-KR", viewport={"width": 1280, "height": 900}
         )
 
     def export_session(self, path: str) -> None:
@@ -259,7 +260,7 @@ class DcUploader:
         with sync_playwright() as p:
             browser = None
             if self.storage_state:
-                browser = p.chromium.launch(headless=not self.headed, args=CHROME_ARGS)
+                browser = p.chromium.launch(headless=not self.headed, args=CHROME_ARGS, channel=os.environ.get("BROWSER_CHANNEL") or None)
                 saved = self.storage_state if Path(self.storage_state).exists() else None
                 ctx = browser.new_context(storage_state=saved, user_agent=UA, locale="ko-KR", viewport={"width": 1280, "height": 900})
             else:
