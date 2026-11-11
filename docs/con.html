@@ -71,7 +71,7 @@ video{width:100%;max-height:340px;background:#000;border-radius:8px;display:bloc
 .li.on{border-color:var(--ac)}.li img{width:56px;height:56px;border-radius:5px;background:#fff;object-fit:cover;flex:0 0 auto}
 .lt{font-size:12px;color:var(--dim);min-width:0;line-height:1.45}.lt b{color:var(--tx)}.lt span{color:var(--tx);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
 .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;max-height:260px;overflow:auto}
-.gi{background:var(--pan2);border:2px solid transparent;border-radius:8px;padding:4px;font-size:11px;color:var(--dim);text-align:center;cursor:pointer}.gi.on{border-color:var(--ac)}.gal .note{grid-column:1/-1}
+.gi{background:var(--pan2);border:2px solid transparent;border-radius:8px;padding:4px;font-size:11px;color:var(--dim);text-align:center;cursor:pointer}.gi.on{border-color:var(--ac)}.gal .note{grid-column:1/-1}.gi{position:relative}.gx{position:absolute;top:2px;right:2px;padding:0 6px;line-height:1.5;font-size:12px;background:rgba(0,0,0,.65);border-color:transparent;border-radius:999px}.gx:hover{background:var(--rd)}
 .gi img{width:100%;aspect-ratio:1;object-fit:cover;background:#fff;border-radius:4px;display:block;margin-bottom:3px}
 #msg{white-space:pre-wrap;font-size:12px;color:#8bb;margin:6px 0}
 </style>
@@ -88,7 +88,7 @@ video{width:100%;max-height:340px;background:#000;border-radius:8px;display:bloc
 </section>
 
 <section class="box needs" id="p-gal">
-  <h3>만들어진 움짤 모음 <small id="galn"></small></h3>
+  <h3>만들어진 움짤 모음 <small id="galn"></small><button id="galclr" style="margin-left:auto;padding:2px 8px;font-size:12px" title="만든 움짤을 모두 지웁니다">모두 지우기</button></h3>
   <div id="gal" class="gal"></div>
 </section>
 
@@ -326,12 +326,14 @@ function renderList(){
     tx.innerHTML=`<b>#${i+1}</b> ${c.start.toFixed(2)}~${c.end.toFixed(2)}초 · ${(c.end-c.start).toFixed(1)}s<span>${esc(c.t.text.replace(/\n/g," ")||"(문구 없음)")}</span><small>${c.alt?"알트 "+esc(c.alt):"알트 없음"}${r?" · GIF "+r.kb+"KB":""}</small>`;
     d.append(im,tx);d.onclick=()=>pick(i,r?"gif":"edit");box.appendChild(d)});
 }
+function delRes(id){const r=S.res[id];if(!r)return;URL.revokeObjectURL(r.url);delete S.res[id];renderAll();showGif();$("msg").textContent="움짤을 지웠습니다. 콘 설정은 그대로라 다시 만들 수 있습니다."}
 function renderGal(){
   const box=$("gal");box.innerHTML="";let n=0;
   S.cons.forEach((c,i)=>{const r=S.res[c.id];if(!r)return;n++;const d=document.createElement("div");d.className="gi"+(i===S.sel?" on":"");
-    d.innerHTML=`<img src="${r.url}"><div>#${i+1} · ${r.kb}KB</div>`;d.onclick=()=>pick(i,"edit");box.appendChild(d)});
+    d.innerHTML=`<img src="${r.url}"><div>#${i+1} · ${r.kb}KB</div><button class="gx" title="이 움짤 지우기 (콘 설정은 남습니다)">✕</button>`;d.onclick=()=>pick(i,"edit");
+    d.querySelector(".gx").onclick=e=>{e.stopPropagation();delRes(c.id)};box.appendChild(d)});
   $("galn").textContent=n?n+"개":"";if(!n)box.innerHTML='<div class="note">아직 만든 움짤이 없습니다. 오른쪽 "GIF 만들기"를 누르세요.</div>';
-  $("zip").disabled=$("one").disabled=!n;
+  $("zip").disabled=$("one").disabled=!n;$("galclr").style.display=n?"":"none";
 }
 function pick(i,view){S.sel=i;stopPlay();vid.pause();setView(view||"edit");syncUI();vid.currentTime=cur().start;draw()}
 $("addCon").onclick=()=>{const c=cur();newCon(c?c.end:0);setView("edit");syncUI();vid.currentTime=cur().start};
@@ -407,6 +409,7 @@ function renderMos(){const o=$("mosov"),r=vrect();Object.assign(o.style,{left:r.
     d.append("영역"+(i+1)+" · "+(k?"#"+k+"만":"전체 콘"));const b=document.createElement("button");b.textContent="✕";b.title="이 영역 지우기";b.onclick=()=>{S.mos.splice(i,1);renderMos();draw()};d.appendChild(b);$("moslist").appendChild(d)});
   $("mosnote").textContent=S.drawing?"영상 위에서 끌어 자막 부분을 덮으세요. 위치 이동은 아래 타임라인을 쓰세요. 다 했으면 버튼을 다시 누르세요.":(S.mos.length?"":"영상에 자막이 있으면 그 부분만 모자이크로 가릴 수 있습니다.")}
 $("mosdraw").onclick=()=>{S.drawing=!S.drawing;$("mosdraw").classList.toggle("on",S.drawing);$("mosdraw").textContent=S.drawing?"✔ 그리기 끝내기":"▦ 모자이크 영역 그리기";vid.pause();renderMos()};
+$("galclr").onclick=()=>{if(!Object.keys(S.res).length)return;if(!confirm("만든 움짤을 모두 지울까요? (콘 설정은 남습니다)"))return;Object.keys(S.res).forEach(id=>{URL.revokeObjectURL(S.res[id].url);delete S.res[id]});renderAll();showGif()};
 $("mosclr").onclick=()=>{S.mos=[];renderMos();draw()};
 $("mosbs").oninput=()=>{S.mbs=+$("mosbs").value;draw();saveOpts()};
 let md=null;const mo=$("mosov");
