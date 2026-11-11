@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>콘 만들기</title>
+<style>
+:root{--bg:#1c1c1e;--pan:#262628;--pan2:#2f2f33;--line:#3a3a3f;--tx:#e8e8e8;--dim:#9a9aa0;--ac:#5b6ee1;--rd:#c4524a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:17px;margin:0}header .n{color:var(--dim);font-size:12px}
+main{max-width:1100px;margin:0 auto;padding:14px 16px 60px}
+input,select,button,textarea{font:inherit;color:inherit;background:var(--pan2);border:1px solid var(--line);border-radius:6px;padding:6px 9px}
+input[type=range]{padding:0;width:100%}input[type=color]{padding:0;width:38px;height:30px;cursor:pointer}input[type=number]{width:70px}
+button{cursor:pointer}button:hover{border-color:#666}button.p{background:var(--ac);border-color:var(--ac)}button.d{background:var(--rd);border-color:var(--rd)}button:disabled{opacity:.45;cursor:default}
+.box{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.row>label{color:var(--dim);font-size:12px}
+.note{color:var(--dim);font-size:12px;line-height:1.5}h3{margin:0 0 8px;font-size:14px}
+#drop{border:2px dashed #555;border-radius:10px;padding:18px;text-align:center;color:var(--dim);cursor:pointer}#drop.on{border-color:var(--ac);color:#fff}
+video{width:100%;max-height:420px;background:#000;border-radius:8px;display:block}
+#film{display:flex;gap:2px;overflow-x:auto;margin-top:8px;position:relative;padding-bottom:4px}
+#film canvas{height:46px;flex:0 0 auto;border-radius:3px;cursor:pointer;opacity:.55}#film canvas.in{opacity:1;outline:2px solid var(--ac)}
+.edit{display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:14px}
+@media(max-width:760px){.edit{grid-template-columns:1fr}}
+#pv{width:100%;aspect-ratio:1;background:repeating-conic-gradient(#555 0 25%,#444 0 50%) 0 0/16px 16px;border-radius:8px;touch-action:none;cursor:move;display:block}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.g2>div{display:flex;flex-direction:column;gap:3px}.g2 label{color:var(--dim);font-size:12px}
+.cons{display:flex;gap:10px;flex-wrap:wrap}.con{width:128px;background:var(--pan2);border:2px solid transparent;border-radius:8px;padding:6px;font-size:11px;color:var(--dim);cursor:pointer}
+.con.on{border-color:var(--ac)}.con img,.con canvas{width:100%;aspect-ratio:1;border-radius:4px;background:#fff;display:block;margin-bottom:4px;object-fit:cover}
+.con input{width:100%;padding:3px 6px;font-size:12px}
+#msg{white-space:pre-wrap;font-size:12px;color:#8bb;margin:6px 0}
+.seg button.on{background:var(--ac);border-color:var(--ac)}
+</style>
+</head>
+<body>
+<header><h1>콘 만들기</h1><span class="n">영상 파일 → 프레임 단위로 자르기 → 문구 → GIF · 파일은 이 기기 밖으로 나가지 않습니다</span></header>
+<main>
+
+<div class="box">
+  <div id="drop">영상 파일(mp4·mov·webm)을 끌어다 놓거나 눌러서 선택<input id="file" type="file" accept="video/*" hidden></div>
+  <div class="row"><input id="yt" placeholder="유튜브 링크를 붙여넣으면 방법을 안내합니다" style="flex:1;min-width:220px"></div>
+  <div id="ytmsg" class="note"></div>
+</div>
+
+<div class="box" id="vbox" hidden>
+  <h3>영상 (여기서 구간을 찾으세요)</h3>
+  <video id="vid" controls playsinline muted></video>
+  <div id="film"></div>
+  <div class="row">
+    <button id="b-10">⏪ -10프레임</button><button id="b-1">◀ -1프레임</button><button id="b+1">+1프레임 ▶</button><button id="b+10">+10프레임 ⏩</button>
+    <label>초당 프레임</label><input id="fps" type="number" value="30" min="1" max="120">
+    <span id="tcur" class="note"></span>
+  </div>
+  <input id="seek" type="range" min="0" max="1000" value="0">
+  <div class="row">
+    <button id="setS" class="p">현재 위치를 시작으로</button><button id="setE" class="p">현재 위치를 끝으로</button>
+    <label>시작</label><input id="inS" type="number" step="0.01" style="width:80px"><label>끝</label><input id="inE" type="number" step="0.01" style="width:80px">
+    <span id="tlen" class="note"></span>
+  </div>
+</div>
+
+<div class="box" id="ebox" hidden>
+  <h3>콘 편집 <span class="note">— 미리보기를 끌어서 위치를 바꿀 수 있습니다</span></h3>
+  <div class="edit">
+    <div>
+      <canvas id="pv" width="400" height="400"></canvas>
+      <div class="row seg"><label>끌어서 움직일 것</label><button id="m-text" class="on">문구</button><button id="m-vid">영상 위치</button><button id="play">▶ 구간 재생</button></div>
+      <div class="g2">
+        <div><label>영상 확대 <span id="zv"></span></label><input id="zoom" type="range" min="100" max="400" value="100"></div>
+        <div><label>가로 위치</label><input id="cx" type="range" min="0" max="100" value="50"></div>
+        <div><label>세로 위치</label><input id="cy" type="range" min="0" max="100" value="50"></div>
+      </div>
+    </div>
+    <div>
+      <div class="row"><label>문구</label><textarea id="t-text" rows="2" style="flex:1;min-width:180px" placeholder="콘에 넣을 문구(줄바꿈 가능)"></textarea></div>
+      <div class="g2">
+        <div><label>글꼴</label><select id="t-font"></select></div>
+        <div><label>글꼴 추가</label><div class="row" style="margin:0"><button id="fontfile">파일 불러오기</button><button id="fontlocal">내 PC 글꼴</button><input id="fontin" type="file" accept=".ttf,.otf,.woff,.woff2" hidden></div></div>
+        <div><label>크기 <span id="v-size"></span></label><input id="t-size" type="range" min="8" max="120" value="28"></div>
+        <div><label>글자 색</label><input id="t-color" type="color" value="#ffffff"></div>
+        <div><label>테두리 색</label><input id="t-stroke" type="color" value="#000000"></div>
+        <div><label>테두리 굵기 <span id="v-sw"></span></label><input id="t-sw" type="range" min="0" max="12" step="0.5" value="3"></div>
+        <div><label>자간 <span id="v-ls"></span></label><input id="t-ls" type="range" min="-5" max="20" step="0.5" value="0"></div>
+        <div><label>회전 <span id="v-rot"></span></label><input id="t-rot" type="range" min="-45" max="45" value="0"></div>
+        <div><label>가로 위치 <span id="v-x"></span></label><input id="t-x" type="range" min="0" max="100" value="50"></div>
+        <div><label>세로 위치 <span id="v-y"></span></label><input id="t-y" type="range" min="0" max="100" value="88"></div>
+      </div>
+      <div class="row"><label><input type="checkbox" id="t-bold" checked> 굵게</label><label><input type="checkbox" id="t-italic"> 기울임</label><label><input type="checkbox" id="t-shadow"> 그림자</label>
+        <button id="applyall">이 문구 스타일을 모든 콘에 적용</button></div>
+      <div class="row"><label>알트값(1~3자)</label><input id="alt" maxlength="3" style="width:70px"><span class="note">디시콘 등록 시 이미지마다 필요합니다</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="box" id="lbox" hidden>
+  <h3>콘 목록</h3>
+  <div class="cons" id="cons"></div>
+  <div class="row"><button id="addCon">+ 콘 추가</button><button id="dupCon">현재 콘 복제</button><button id="delCon" class="d">현재 콘 삭제</button></div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+  <div class="row"><label>크기(px)</label><input id="osize" type="number" value="200" min="50" max="400"><label>초당 프레임</label><input id="ofps" type="number" value="15" min="5" max="30">
+    <label>최대 KB</label><input id="omax" type="number" value="500" min="50" max="2000"><label>최대 색</label><select id="ocol"><option>256</option><option>128</option><option>64</option></select></div>
+  <div class="row"><button id="mk" class="p">GIF 만들기 (전체)</button><button id="mk1">현재 콘만</button><button id="zip" disabled>전부 zip 저장</button><button id="one" disabled>현재 콘 GIF 저장</button></div>
+  <div class="note">디시콘 규격: 200×200, 파일당 2MB 이하, 이미지당 알트값 1~3자, 10개 이상. 용량이 최대 KB를 넘으면 색 → 프레임 → 크기 순으로 자동으로 줄입니다.</div>
+  <div id="msg"></div>
+</div>
+</main>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const FONTS=["Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR","Nanum Gothic","Nanum Myeongjo","Gulim","Dotum","Batang","Arial Black","Impact","Comic Sans MS","sans-serif","serif","cursive"];
+const DEFT={text:"",font:"Malgun Gothic",size:28,bold:true,italic:false,color:"#ffffff",stroke:"#000000",sw:3,shadow:false,x:50,y:88,ls:0,rot:0};
+const S={url:"",dur:0,fps:30,cons:[],sel:-1,mode:"text",playing:false,w:0,h:0,res:{}};
+const vid=$("vid"),pv=$("pv"),pc=pv.getContext("2d");
+let thumbBusy=0;
+
+/* ---------- 영상 불러오기 ---------- */
+$("drop").onclick=()=>$("file").click();
+$("file").onchange=e=>e.target.files[0]&&load(e.target.files[0]);
+["dragover","dragleave","drop"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.toggle("on",ev==="dragover");if(ev==="drop"&&e.dataTransfer.files[0])load(e.dataTransfer.files[0])}));
+$("yt").oninput=()=>{const v=$("yt").value;$("ytmsg").innerHTML=/youtu\.?be/.test(v)?
+ "유튜브는 보안 때문에 브라우저가 영상을 직접 가져올 수 없습니다. <b>영상을 mp4로 받은 뒤 위에 올려주세요.</b><br>받는 방법: 콘 만들기 프로그램(dccon.exe) 또는 yt-dlp 로 링크를 mp4로 저장하면 됩니다.":""};
+function load(f){
+  if(S.url)URL.revokeObjectURL(S.url);
+  S.url=URL.createObjectURL(f);vid.src=S.url;vid.load();
+  vid.onloadedmetadata=()=>{S.dur=vid.duration;S.w=vid.videoWidth;S.h=vid.videoHeight;$("vbox").hidden=$("ebox").hidden=$("lbox").hidden=false;
+    $("seek").max=Math.floor(S.dur*1000);S.cons=[];S.sel=-1;newCon(0);estFps();buildFilm();vid.currentTime=0;syncUI()};
+  vid.onerror=()=>{$("ytmsg").textContent="이 영상을 열 수 없습니다. mp4(H.264), webm 형식인지 확인하세요."};
+}
+function estFps(){ // 잠깐 재생해 프레임 간격을 추정한다(끝나면 처음으로)
+  if(!vid.requestVideoFrameCallback)return;let last=null;const ds=[];vid.muted=true;
+  const fin=()=>{vid.pause();const d=ds.sort((a,b)=>a-b)[ds.length>>1];if(d){const f=Math.round(1/d);if(f>=5&&f<=120){$("fps").value=f;S.fps=f}}vid.currentTime=0};
+  const cb=(now,m)=>{const t=m.mediaTime;if(last!=null&&t>last)ds.push(t-last);last=t;if(ds.length<8&&!vid.ended)vid.requestVideoFrameCallback(cb);else fin()};
+  vid.requestVideoFrameCallback(cb);vid.play().catch(()=>{});setTimeout(()=>{if(!vid.paused)fin()},1500);
+}
+
+/* ---------- 상태 ---------- */
+function newCon(start){const c={id:(Math.random()+"").slice(2),start:Math.min(start,Math.max(0,S.dur-0.2)),end:0,cx:50,cy:50,zoom:1,t:{...DEFT},alt:""};c.end=Math.min(S.dur,c.start+2.5);
+  if(S.cons[S.sel])c.t={...S.cons[S.sel].t,text:""};S.cons.push(c);S.sel=S.cons.length-1;return c}
+const cur=()=>S.cons[S.sel];
+function fmt(t){return t.toFixed(2)+"초"}
+function fr(){return Math.max(1,+$("fps").value||30)}
+
+/* ---------- 프레임 이동 ---------- */
+function step(n){vid.pause();stopPlay();vid.currentTime=Math.min(Math.max(0,vid.currentTime+n/fr()),S.dur)}
+$("b-10").onclick=()=>step(-10);$("b-1").onclick=()=>step(-1);$("b+1").onclick=()=>step(1);$("b+10").onclick=()=>step(10);
+$("fps").onchange=()=>{S.fps=fr()};
+$("seek").oninput=e=>{vid.pause();stopPlay();vid.currentTime=e.target.value/1000};
+vid.addEventListener("timeupdate",()=>{$("seek").value=Math.floor(vid.currentTime*1000);$("tcur").textContent="현재 "+fmt(vid.currentTime)+" · 프레임 "+Math.round(vid.currentTime*fr())});
+vid.addEventListener("seeked",()=>draw());
+$("setS").onclick=()=>{const c=cur();c.start=vid.currentTime;if(c.end<=c.start+0.1)c.end=Math.min(S.dur,c.start+1);syncUI();draw()};
+$("setE").onclick=()=>{const c=cur();c.end=Math.max(vid.currentTime,c.start+0.1);syncUI();draw()};
+$("inS").onchange=()=>{const c=cur();c.start=Math.max(0,Math.min(+$("inS").value,S.dur-.1));if(c.end<=c.start)c.end=c.start+.1;syncUI();vid.currentTime=c.start};
+$("inE").onchange=()=>{const c=cur();c.end=Math.min(S.dur,Math.max(+$("inE").value,c.start+.1));syncUI()};
+
+/* ---------- 필름스트립 ---------- */
+async function buildFilm(){
+  const id=++thumbBusy,f=$("film");f.innerHTML="";const v=document.createElement("video");v.muted=true;v.src=S.url;await new Promise(r=>v.onloadeddata=r);
+  const n=Math.min(24,Math.max(6,Math.floor(S.dur*2))),ar=S.w/S.h;
+  for(let i=0;i<n;i++){if(id!==thumbBusy)return;const t=S.dur*(i+.5)/n;await seekTo(v,t);const c=document.createElement("canvas");c.height=92;c.width=Math.round(92*ar);c.getContext("2d").drawImage(v,0,0,c.width,c.height);c.dataset.t=t;c.onclick=()=>{vid.pause();stopPlay();vid.currentTime=+c.dataset.t};f.appendChild(c)}
+  markFilm();
+}
+function markFilm(){const c=cur();if(!c)return;document.querySelectorAll("#film canvas").forEach(k=>k.classList.toggle("in",+k.dataset.t>=c.start&&+k.dataset.t<=c.end))}
+function seekTo(v,t){return new Promise(res=>{const done=()=>{v.removeEventListener("seeked",done);res()};v.addEventListener("seeked",done);v.currentTime=Math.min(Math.max(0,t),(v.duration||t)-0.001)})}
+
+/* ---------- 그리기 ---------- */
+function cropRect(c,w,h){const s=Math.min(w,h)/c.zoom;const sx=Math.min(Math.max(c.cx/100*w-s/2,0),w-s),sy=Math.min(Math.max(c.cy/100*h-s/2,0),h-s);return[sx,sy,s]}
+function drawText(ctx,t,size){
+  if(!t.text)return;const k=size/200;ctx.save();
+  ctx.font=`${t.italic?"italic ":""}${t.bold?"bold ":""}${t.size*k}px "${t.font}",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";
+  if("letterSpacing" in ctx)ctx.letterSpacing=(t.ls*k)+"px";
+  ctx.translate(t.x/100*size,t.y/100*size);ctx.rotate(t.rot*Math.PI/180);
+  const lines=t.text.split("\n"),lh=t.size*k*1.2,y0=-(lines.length-1)*lh/2;
+  lines.forEach((ln,i)=>{const y=y0+i*lh;
+    if(t.sw>0){ctx.strokeStyle=t.stroke;ctx.lineWidth=t.sw*k*2;ctx.strokeText(ln,0,y)}
+    if(t.shadow){ctx.shadowColor="rgba(0,0,0,.65)";ctx.shadowBlur=4*k;ctx.shadowOffsetX=2*k;ctx.shadowOffsetY=2*k}
+    ctx.fillStyle=t.color;ctx.fillText(ln,0,y);ctx.shadowColor="transparent"});
+  ctx.restore();
+}
+function paint(ctx,v,c,size){const[sx,sy,s]=cropRect(c,v.videoWidth,v.videoHeight);ctx.fillStyle="#000";ctx.fillRect(0,0,size,size);ctx.drawImage(v,sx,sy,s,s,0,0,size,size);drawText(ctx,c.t,size)}
+function draw(){const c=cur();if(!c||!vid.videoWidth)return;paint(pc,vid,c,pv.width)}
+
+/* ---------- 미리보기 재생/드래그 ---------- */
+function stopPlay(){S.playing=false;$("play").textContent="▶ 구간 재생"}
+$("play").onclick=()=>{const c=cur();if(S.playing){vid.pause();stopPlay();return}S.playing=true;$("play").textContent="■ 정지";vid.currentTime=c.start;vid.play();
+  const loop=()=>{if(!S.playing)return;if(vid.currentTime>=c.end||vid.ended){vid.currentTime=c.start}draw();requestAnimationFrame(loop)};requestAnimationFrame(loop)};
+$("m-text").onclick=()=>setMode("text");$("m-vid").onclick=()=>setMode("vid");
+function setMode(m){S.mode=m;$("m-text").classList.toggle("on",m==="text");$("m-vid").classList.toggle("on",m==="vid")}
+let drag=null;
+pv.addEventListener("pointerdown",e=>{pv.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY,c:{...cur()},t:{...cur().t}};move(e)});
+pv.addEventListener("pointermove",e=>{if(drag)move(e)});pv.addEventListener("pointerup",()=>{drag=null});
+function move(e){const r=pv.getBoundingClientRect(),c=cur();
+  if(S.mode==="text"){c.t.x=Math.round(Math.min(100,Math.max(0,(e.clientX-r.left)/r.width*100)));c.t.y=Math.round(Math.min(100,Math.max(0,(e.clientY-r.top)/r.height*100)))}
+  else{const[,,s]=cropRect(drag.c,S.w,S.h);const dx=(e.clientX-drag.x)/r.width*s,dy=(e.clientY-drag.y)/r.height*s;c.cx=Math.min(100,Math.max(0,drag.c.cx-dx/S.w*100));c.cy=Math.min(100,Math.max(0,drag.c.cy-dy/S.h*100))}
+  syncUI(true);draw()}
+
+/* ---------- 편집 컨트롤 ---------- */
+function fillFonts(sel){const s=$("t-font");s.innerHTML="";[...new Set(FONTS.concat(S.extra||[]))].forEach(f=>{const o=document.createElement("option");o.textContent=f;o.style.fontFamily=f;s.appendChild(o)});if(sel)s.value=sel}
+fillFonts();
+const BIND={ "t-text":["text","v"],"t-font":["font","v"],"t-size":["size","n"],"t-color":["color","v"],"t-stroke":["stroke","v"],"t-sw":["sw","n"],"t-ls":["ls","n"],"t-rot":["rot","n"],"t-x":["x","n"],"t-y":["y","n"],"t-bold":["bold","c"],"t-italic":["italic","c"],"t-shadow":["shadow","c"]};
+for(const[id,[k,ty]]of Object.entries(BIND))$(id).addEventListener("input",()=>{const c=cur();c.t[k]=ty==="c"?$(id).checked:ty==="n"?+$(id).value:$(id).value;syncUI(true);draw()});
+$("zoom").oninput=()=>{cur().zoom=$("zoom").value/100;syncUI(true);draw()};
+$("cx").oninput=()=>{cur().cx=+$("cx").value;draw()};$("cy").oninput=()=>{cur().cy=+$("cy").value;draw()};
+$("alt").oninput=()=>{cur().alt=$("alt").value;renderCons()};
+$("applyall").onclick=()=>{const t=cur().t;S.cons.forEach(c=>{const tx=c.t.text,x=c.t.x,y=c.t.y;c.t={...t,text:tx,x,y}});$("msg").textContent="문구 스타일(글꼴·색·크기 등)을 모든 콘에 적용했습니다. 문구 내용과 위치는 그대로입니다."};
+$("fontfile").onclick=()=>$("fontin").click();
+$("fontin").onchange=async e=>{const f=e.target.files[0];if(!f)return;const name=f.name.replace(/\.[^.]+$/,"");
+  try{const ff=new FontFace(name,await f.arrayBuffer());await ff.load();document.fonts.add(ff);(S.extra=S.extra||[]).push(name);fillFonts(name);cur().t.font=name;draw();$("msg").textContent="글꼴을 불러왔습니다: "+name}catch(err){$("msg").textContent="글꼴을 열 수 없습니다: "+err.message}};
+$("fontlocal").onclick=async()=>{if(!window.queryLocalFonts){$("msg").textContent="이 브라우저는 내 PC 글꼴 목록을 지원하지 않습니다(크롬·엣지 PC에서 가능). '파일 불러오기'를 쓰세요.";return}
+  try{const l=await window.queryLocalFonts();S.extra=[...new Set(l.map(f=>f.family))];fillFonts(cur().t.font);$("msg").textContent="내 PC 글꼴 "+S.extra.length+"개를 불러왔습니다."}catch(e){$("msg").textContent="글꼴 목록 권한이 거부됐습니다."}};
+
+function syncUI(light){
+  const c=cur();if(!c)return;const t=c.t;
+  $("inS").value=c.start.toFixed(2);$("inE").value=c.end.toFixed(2);$("tlen").textContent="길이 "+(c.end-c.start).toFixed(2)+"초 · 약 "+Math.round((c.end-c.start)*(+$("ofps").value||15))+"프레임";
+  $("zv").textContent=c.zoom.toFixed(1)+"x";$("v-size").textContent=t.size;$("v-sw").textContent=t.sw;$("v-ls").textContent=t.ls;$("v-rot").textContent=t.rot+"°";$("v-x").textContent=t.x;$("v-y").textContent=t.y;
+  if(light)return;
+  $("zoom").value=c.zoom*100;$("cx").value=c.cx;$("cy").value=c.cy;$("alt").value=c.alt;
+  for(const[id,[k,ty]]of Object.entries(BIND)){if(ty==="c")$(id).checked=t[k];else $(id).value=t[k]}
+  markFilm();renderCons();
+}
+function renderCons(){
+  const box=$("cons");box.innerHTML="";
+  S.cons.forEach((c,i)=>{const d=document.createElement("div");d.className="con"+(i===S.sel?" on":"");
+    const r=S.res[c.id];let el;
+    if(r){el=document.createElement("img");el.src=r.url}else{el=document.createElement("canvas");el.width=el.height=96;const ctx=el.getContext("2d");ctx.fillStyle="#ddd";ctx.fillRect(0,0,96,96);ctx.fillStyle="#666";ctx.font="12px sans-serif";ctx.textAlign="center";ctx.fillText("#"+(i+1),48,52)}
+    d.appendChild(el);const info=document.createElement("div");info.textContent=`${c.start.toFixed(1)}~${c.end.toFixed(1)}초`+(r?` · ${r.kb}KB`:"")+(c.alt?` · ${c.alt}`:"");d.appendChild(info);
+    d.onclick=()=>{S.sel=i;stopPlay();vid.pause();syncUI();vid.currentTime=c.start;draw()};box.appendChild(d)});
+}
+$("addCon").onclick=()=>{const c=cur();newCon(c?c.end:0);syncUI();vid.currentTime=cur().start};
+$("dupCon").onclick=()=>{const c=cur();const n=JSON.parse(JSON.stringify(c));n.id=(Math.random()+"").slice(2);S.cons.splice(S.sel+1,0,n);S.sel++;syncUI()};
+$("delCon").onclick=()=>{if(S.cons.length<2){$("msg").textContent="콘이 하나는 있어야 합니다.";return}S.cons.splice(S.sel,1);S.sel=Math.min(S.sel,S.cons.length-1);syncUI();draw()};
+["input","change"].forEach(ev=>$("ofps").addEventListener(ev,()=>syncUI(true)));
+
+/* ================= GIF 인코더 ================= */
+function quantize(frames,n){
+  const total=frames.length*frames[0].width*frames[0].height,stride=Math.max(1,Math.floor(total/30000)),px=[];
+  let k=0;for(const f of frames){const d=f.data;for(let i=0;i<d.length;i+=4){if((k++%stride)===0)px.push((d[i]<<16)|(d[i+1]<<8)|d[i+2])}}
+  let boxes=[px];
+  const ch=(v,c)=>(v>>(16-8*c))&255;
+  const range=b=>{let mn=[255,255,255],mx=[0,0,0];for(const v of b)for(let c=0;c<3;c++){const x=ch(v,c);if(x<mn[c])mn[c]=x;if(x>mx[c])mx[c]=x}const r=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]];const m=Math.max(...r);return{m,c:r.indexOf(m)}};
+  while(boxes.length<n){let bi=-1,bs=0,bc=0;boxes.forEach((b,i)=>{if(b.length<2)return;const r=range(b),s=r.m*Math.sqrt(b.length);if(s>bs){bs=s;bi=i;bc=r.c}});if(bi<0)break;
+    const b=boxes[bi];b.sort((a,c)=>ch(a,bc)-ch(c,bc));const h=b.length>>1;boxes.splice(bi,1,b.slice(0,h),b.slice(h))}
+  const pal=boxes.map(b=>{let r=0,g=0,bl=0;for(const v of b){r+=v>>16;g+=(v>>8)&255;bl+=v&255}const L=b.length||1;return[Math.round(r/L),Math.round(g/L),Math.round(bl/L)]});
+  while(pal.length<n)pal.push([0,0,0]);return pal;
+}
+function indexFrames(frames,pal){
+  const cache=new Int16Array(32768).fill(-1);const out=[];
+  for(const f of frames){const d=f.data,o=new Uint8Array(d.length>>2);
+    for(let i=0,j=0;i<d.length;i+=4,j++){const r=d[i],g=d[i+1],b=d[i+2],key=((r>>3)<<10)|((g>>3)<<5)|(b>>3);let v=cache[key];
+      if(v<0){let best=1e9;for(let p=0;p<pal.length;p++){const q=pal[p],e=(q[0]-r)*(q[0]-r)+(q[1]-g)*(q[1]-g)+(q[2]-b)*(q[2]-b);if(e<best){best=e;v=p}}cache[key]=v}
+      o[j]=v}out.push(o)}
+  return out;
+}
+function lzw(minCode,idx){
+  const clear=1<<minCode,eoi=clear+1;let size=minCode+1,next=eoi+1;const out=[];let cur=0,bits=0;
+  const emit=c=>{cur|=c<<bits;bits+=size;while(bits>=8){out.push(cur&255);cur>>>=8;bits-=8}};
+  let dict=new Map();emit(clear);let pre=idx[0];
+  for(let i=1;i<idx.length;i++){const k=idx[i],key=(pre<<8)|k,v=dict.get(key);
+    if(v!==undefined){pre=v}else{emit(pre);
+      if(next<4096){dict.set(key,next);if(next===(1<<size)&&size<12)size++;next++}  // 새 코드가 현재 비트수를 넘으면 한 비트 늘린다
+      else{emit(clear);dict=new Map();size=minCode+1;next=eoi+1}
+      pre=k}}
+  emit(pre);emit(eoi);if(bits>0)out.push(cur&255);return out;
+}
+function encodeGif(frames,w,h,delayCs,pal,idxs){
+  const o=[];const u16=v=>o.push(v&255,(v>>8)&255);const str=s=>{for(const ch of s)o.push(ch.charCodeAt(0))};
+  const bitsN=Math.max(1,Math.ceil(Math.log2(pal.length)));str("GIF89a");u16(w);u16(h);o.push(0x80|0x70|(bitsN-1),0,0);
+  for(let i=0;i<(1<<bitsN);i++){const q=pal[i]||[0,0,0];o.push(q[0],q[1],q[2])}
+  o.push(0x21,0xFF,0x0B);str("NETSCAPE2.0");o.push(3,1,0,0,0);
+  const minCode=Math.max(2,bitsN);
+  idxs.forEach(ix=>{o.push(0x21,0xF9,4,0x04);u16(delayCs);o.push(0,0);o.push(0x2C);u16(0);u16(0);u16(w);u16(h);o.push(0);o.push(minCode);
+    const data=lzw(minCode,ix);for(let i=0;i<data.length;i+=255){const ch=data.slice(i,i+255);o.push(ch.length);for(const b of ch)o.push(b)}o.push(0)});
+  o.push(0x3B);return new Uint8Array(o);
+}
+
+/* ================= zip (저장만, 압축 없음) ================= */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=~0;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(~c)>>>0};
+function makeZip(files){const parts=[],cd=[];let off=0;const enc=new TextEncoder();
+  for(const f of files){const nm=enc.encode(f.name),crc=crc32(f.data),n=f.data.length;
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint32(14,crc,true);h.setUint32(18,n,true);h.setUint32(22,n,true);h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer),nm,f.data);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,n,true);c.setUint32(24,n,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+    cd.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+n}
+  const cdl=cd.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cdl,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cd,new Uint8Array(e.buffer)],{type:"application/zip"})}
+
+/* ================= 만들기 ================= */
+async function capture(c,ev,size,fps){
+  const v=ev,n=Math.max(2,Math.min(150,Math.round((c.end-c.start)*fps))),cv=document.createElement("canvas");cv.width=cv.height=size;const ctx=cv.getContext("2d",{willReadFrequently:true}),fr=[];
+  for(let i=0;i<n;i++){await seekTo(v,c.start+(c.end-c.start)*i/n);paint(ctx,v,c,size);fr.push(ctx.getImageData(0,0,size,size))}
+  return fr;
+}
+function scaleFrames(frames,size){const a=document.createElement("canvas"),b=document.createElement("canvas");a.width=a.height=frames[0].width;b.width=b.height=size;const x=a.getContext("2d"),y=b.getContext("2d",{willReadFrequently:true});y.imageSmoothingQuality="high";
+  return frames.map(f=>{x.putImageData(f,0,0);y.clearRect(0,0,size,size);y.drawImage(a,0,0,size,size);return y.getImageData(0,0,size,size)})}
+async function makeOne(i,ev){
+  const c=S.cons[i],size=+$("osize").value||200,fps=+$("ofps").value||15,maxKB=+$("omax").value||500,maxCol=+$("ocol").value;
+  let frames=await capture(c,ev,size,fps),delay=Math.max(2,Math.round(100/fps));
+  const steps=[[maxCol,1,1],[128,1,1],[64,1,1],[64,2,1],[64,2,.85],[32,2,.7]].filter((s,k)=>k===0||s[0]<=maxCol);
+  let best=null;
+  for(const[col,drop,sc]of steps){
+    let fs=frames;if(drop>1)fs=frames.filter((_,k)=>k%drop===0);let sz=size;if(sc<1){sz=Math.round(size*sc);fs=scaleFrames(fs,sz)}
+    const pal=quantize(fs,col),idx=indexFrames(fs,pal),gif=encodeGif(fs,sz,sz,delay*drop,pal,idx);
+    best={gif,col,drop,sz};if(gif.length<=maxKB*1024)break;
+  }
+  const prev=S.res[c.id];if(prev)URL.revokeObjectURL(prev.url);
+  const blob=new Blob([best.gif],{type:"image/gif"});
+  const rep=document.createElement("canvas");rep.width=rep.height=Math.max(200,size);paint(rep.getContext("2d"),ev,c,rep.width);
+  S.res[c.id]={url:URL.createObjectURL(blob),kb:Math.round(best.gif.length/1024),bytes:best.gif,rep,note:best.col+"색"+(best.drop>1?" · 프레임↓":"")+(best.sz!==size?" · "+best.sz+"px":"")};
+}
+async function runMake(idxs){
+  if(!S.url)return;vid.pause();stopPlay();["mk","mk1","zip","one"].forEach(i=>$(i).disabled=true);
+  const ev=document.createElement("video");ev.muted=true;ev.src=S.url;await new Promise(r=>ev.onloadeddata=r);
+  try{for(let k=0;k<idxs.length;k++){$("msg").textContent=`만드는 중… ${k+1}/${idxs.length}`;await makeOne(idxs[k],ev);renderCons()}
+    const over=S.cons.filter(c=>S.res[c.id]&&S.res[c.id].kb>2000).length;
+    $("msg").textContent="완료: "+idxs.map(i=>`#${i+1} ${S.res[S.cons[i].id].kb}KB(${S.res[S.cons[i].id].note})`).join(" · ")+(over?"\n⚠ 2MB가 넘는 콘이 있습니다. 길이를 줄이거나 크기를 낮추세요.":"")+(S.cons.length<10?`\n참고: 디시콘 등록은 10개 이상이 필요합니다(현재 ${S.cons.length}개).`:"")}
+  catch(e){$("msg").textContent="오류: "+e.message}
+  ["mk","mk1","zip","one"].forEach(i=>$(i).disabled=false);
+}
+$("mk").onclick=()=>runMake(S.cons.map((_,i)=>i));$("mk1").onclick=()=>runMake([S.sel]);
+function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},1000)}
+$("one").onclick=()=>{const r=S.res[cur().id];if(!r){$("msg").textContent="먼저 GIF를 만드세요.";return}save(new Blob([r.bytes],{type:"image/gif"}),`con_${String(S.sel+1).padStart(2,"0")}.gif`)};
+$("zip").onclick=async()=>{const files=[],meta=[];let n=0;
+  for(const[i,c]of S.cons.entries()){const r=S.res[c.id];if(!r)continue;n++;const nm=`con_${String(i+1).padStart(2,"0")}.gif`;files.push({name:nm,data:r.bytes});meta.push(`${nm}\t알트: ${c.alt||""}\t문구: ${c.t.text.replace(/\n/g," ")}`)}
+  if(!n){$("msg").textContent="먼저 GIF를 만드세요.";return}
+  const first=S.res[S.cons.find(c=>S.res[c.id]).id].rep;const png=await new Promise(r=>first.toBlob(r,"image/png"));files.push({name:"대표.png",data:new Uint8Array(await png.arrayBuffer())});
+  files.push({name:"목록.txt",data:new TextEncoder().encode(meta.join("\n"))});save(makeZip(files),"dccon.zip")};
+document.addEventListener("keydown",e=>{if(["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)||!S.url)return;if(e.key==="ArrowLeft"){step(e.shiftKey?-10:-1);e.preventDefault()}if(e.key==="ArrowRight"){step(e.shiftKey?10:1);e.preventDefault()}});
+window.__S=S;window.__enc={quantize,indexFrames,encodeGif,lzw};
+</script>
+</body>
+</html>
