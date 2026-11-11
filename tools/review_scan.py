@@ -153,7 +153,7 @@ def main():
             except Exception as e: print("이미지 실패", name, str(e)[:60])
         if not files and not p.get("links"): new_skip.add(r["no"]); continue
         stat["read"] += 1
-        posts.append(dict(no=p["no"], bait=any(k in r["title"] for k in BAIT), title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
+        posts.append(dict(no=p["no"], kws=[k for k in INC_L if k.lower() in blob], bait=any(k in r["title"] for k in BAIT), title=p["title"], when=r["when"], head=r["head"], rec=r["rec"], views=r["views"], url=p["url"], links=p.get("links", []), files=files))
         print("글", p["no"], p["title"][:30], len(files))
     posts.sort(key=lambda x: x["when"], reverse=True)
     keep = {f["id"] for x in posts for f in x["files"]}

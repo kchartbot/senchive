@@ -42,6 +42,28 @@ button:focus-visible,input:focus-visible,.ph:focus-visible,select:focus-visible{
 .chip button:hover{color:var(--fg)}
 .chip.hc{padding:2px 8px;cursor:pointer}.chip.hc.off{opacity:.4;text-decoration:line-through}
 .tpl{display:flex;gap:4px;margin:4px 0 6px}.tpl select{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 6px}
+.arc{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:auto}
+.arc[hidden]{display:none}
+.arc .in{max-width:1100px;margin:0 auto;background:var(--s1);min-height:100%;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.arc .bar{position:sticky;top:0;z-index:2;background:var(--s1);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px}
+.arc .bar h2{margin:0;font-size:14px;flex:1}
+.arc .fl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px 4px}
+.arc .fl input{background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 8px}
+.arc .fl input[type=search]{flex:1;min-width:140px}
+.arc .seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.arc .seg button{padding:5px 12px;color:var(--mute)}.arc .seg button.on{background:var(--acc);color:var(--accfg)}
+.arc .chips{padding:6px 14px 2px}
+.arc .chip.on{background:var(--acc);color:var(--accfg)}
+.arc .chip{padding:2px 8px;cursor:pointer}
+.arc h3{margin:14px 14px 6px;font-size:13px}
+.arc .heat{overflow-x:auto;padding:0 14px}
+.arc table{border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}
+.arc th,.arc td{padding:3px 5px;text-align:center;border:1px solid var(--line);min-width:30px}
+.arc th:first-child,.arc td:first-child{text-align:left;position:sticky;left:0;background:var(--s1);min-width:70px;font-weight:700}
+.arc td.top{font-size:10px;color:var(--mute);white-space:nowrap}
+.arc .res .hi{padding:9px 14px}
+.arc .res a{color:var(--fg);text-decoration:none;font-weight:700}.arc .res a:hover{text-decoration:underline}
+.arc .kk{display:inline-block;font-size:11px;background:var(--s2);border-radius:2px;padding:0 5px;margin:2px 3px 0 0;color:var(--mute)}
 .add{display:flex;gap:4px;margin-top:8px}
 .add input{flex:1;min-width:0;background:var(--s1);border:1px solid var(--line);border-radius:3px;padding:5px 8px}
 .add button,.mini{background:var(--s2);border-radius:3px;padding:5px 10px;font-size:12px}
@@ -257,7 +279,7 @@ function rHist(){
 }
 function rList(){
   const P=$("#pList"),dN=doneNos(),dI=doneIds();
-  P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" class="sub" style="text-decoration:underline;margin-left:6px">토큰 지우기</button></h2>
+  P.innerHTML=`<div class="hd"><h2>센카이브 <button id="logout" class="sub" style="text-decoration:underline;margin-left:6px">토큰 지우기</button><button class="mini" id="arcbtn" style="margin-left:8px">아카이브</button></h2>
    <div class="sub">${idx?`${esc(idx.generated)} 스캔 · 글 ${idx.posts.length}개`:""}</div>
    <div class="scanrow"><input class="date" type="date" id="since" value="${esc(sinceISO)}" aria-label="스캔 시작 날짜"><button class="scan" id="scan" ${busy?"disabled":""}>${busy?"스캔 중…":"스캔"}</button>${prog&&prog.kind==="scan"?'<button class="stop" id="stop">취소</button>':""}</div>
    <div class="opts"><label><input type="checkbox" id="rec" ${rec?"checked":""} style="width:auto"> 개념글만</label><label title="지난 결과를 재사용하고 새 글만 읽습니다"><input type="checkbox" id="inc" ${inc?"checked":""} style="width:auto"> 새 글만 읽기</label><label>페이지 <input type="number" id="pg" min="1" max="30" value="${pages}"></label><label>글 최대 <input type="number" id="mp" min="0" max="300" value="${maxposts}" title="0이면 제한 없음"></label>
@@ -267,6 +289,7 @@ function rList(){
     ${p.files.length?`<div class="grid">${p.files.map(f=>`<div class="ph${dI.has(f.id)?" dn":""}" data-id="${f.id}" tabindex="0" role="button" aria-label="${f.id}" style="background-image:url('${tUrl(f)}')"><span class="kind">${f.t==="clip"?"움짤":"사진"}</span>${dI.has(f.id)?'<span class="dnm">업로드함</span>':""}<span class="ck" data-ck="${f.id}">✓</span></div>`).join("")}</div>
     <div class="pb"><button data-all="${p.no}">전부 선택</button><button data-none="${p.no}">선택 해제</button></div>`:'<div class="pm">파일 없음 (링크만)</div>'}
     ${p.links.length?`<div class="lks">링크 ${p.links.length}개</div>`:""}</div>`).join(""):`<div class="empty"><b>${idx?"찾은 글이 없습니다":"아직 스캔한 결과가 없습니다"}</b><br>위의 스캔을 눌러 주세요</div>`);
+  $("#arcbtn").onclick=openArc;
   $("#logout").onclick=()=>{LS.del("tk");LS.del("tke");token="";idx=null;start()};
   $("#since").onchange=e=>{sinceISO=e.target.value};
   $("#inc").onchange=e=>{inc=e.target.checked;LS.set("inc",inc?"1":"0")};
@@ -391,6 +414,73 @@ async function load(){
     Object.keys(idx.heads).forEach(n=>{hKnown[n]=idx.heads[n]});[...Object.keys(hKnown)].forEach(n=>{if(!(n in idx.heads)&&hKnown[n]>0)hKnown[n]=0});LS.set("hk",JSON.stringify(hKnown));
     const ids=new Set(all().map(f=>f.id));sel=sel.filter(i=>ids.has(i));if(!ids.has(cur))cur=null}catch(e){idx=null}
 }
+
+/* ---------- 떡밥 아카이브 ---------- */
+let arc=null,aF={from:"",to:"",q:"",kw:new Set(),mode:"hour",more:150};
+const cleanArc=x=>(Array.isArray(x?.posts)?x.posts:[]).map(p=>({no:String(p.no).replace(/\D/g,""),title:String(p.title||"").slice(0,200),when:String(p.when||"").slice(0,20),head:String(p.head||"").slice(0,20),rec:+p.rec||0,views:+p.views||0,
+  url:/^https:\/\/gall\.dcinside\.com\//.test(String(p.url||""))&&okUrl(p.url)?p.url:"#",kws:(Array.isArray(p.kws)?p.kws:[]).map(v=>String(v).slice(0,40)).slice(0,20),links:+p.links||0,files:+p.files||0,bait:!!p.bait})).filter(p=>p.no).slice(0,20000);
+async function loadArc(){
+  try{const r=await gh(`/repos/${REPO}/contents/archive.json?ref=review-archive`,{headers:{Accept:"application/vnd.github.raw+json"}});arc=cleanArc(await r.json())}catch(e){arc=[]}
+  if(arcOpen()){rArcChips();rArcBody()}
+}
+const arcOpen=()=>{const a=$("#arc");return !!a&&!a.hidden};
+const wParse=w=>{const m=/^(\d{4})\.(\d{2})\.(\d{2})(?:\s+(\d{2}):\d{2})?/.exec(w||"");return m?{d:`${m[1]}-${m[2]}-${m[3]}`,h:m[4]!=null?+m[4]:null}:null};
+const inRange=p=>{if(!aF.from&&!aF.to)return true;const w=wParse(p.when);if(!w)return false;return !(aF.from&&w.d<aF.from)&&!(aF.to&&w.d>aF.to)};
+function arcList(){const q=aF.q.trim().toLowerCase();
+  return(arc||[]).filter(p=>inRange(p)&&(!aF.kw.size||p.kws.some(k=>aF.kw.has(k)))&&(!q||p.title.toLowerCase().includes(q)||p.kws.some(k=>k.toLowerCase().includes(q)))).sort((a,b)=>b.when.localeCompare(a.when))}
+function arcStats(L){
+  const hour=aF.mode==="hour";
+  const cols=hour?[...Array(24).keys()]:[...new Set(L.map(p=>wParse(p.when)?.d).filter(Boolean))].sort().slice(-14);
+  const m=new Map();
+  for(const p of L){const w=wParse(p.when);if(!w)continue;const c=hour?w.h:w.d;if(c==null||!cols.includes(c))continue;
+    for(const k of new Set(p.kws)){if(!m.has(k))m.set(k,new Map());const r=m.get(k);r.set(c,(r.get(c)||0)+1)}}
+  const rows=[...m].map(([k,r])=>({k,r,t:[...r.values()].reduce((a,b)=>a+b,0)})).sort((a,b)=>b.t-a.t).slice(0,10);
+  const top=cols.map(c=>{let best=null;for(const x of rows){const n=x.r.get(c)||0;if(n>0&&(!best||n>best.n))best={k:x.k,n}}return best});
+  return{cols,rows,top,max:Math.max(1,...rows.flatMap(x=>[...x.r.values()]))};
+}
+function rArcChips(){
+  const base=(arc||[]).filter(inRange),c=new Map();
+  base.forEach(p=>new Set(p.kws).forEach(k=>c.set(k,(c.get(k)||0)+1)));
+  const L=[...c].sort((a,b)=>b[1]-a[1]).slice(0,30);
+  $("#arcc").innerHTML=L.length?L.map(([k,n])=>`<button class="chip ${aF.kw.has(k)?"on":""}" data-k="${esc(k)}">${esc(k)} <span style="opacity:.7">${n}</span></button>`).join(""):'<span class="sub">키워드 없음</span>';
+  $$("#arcc [data-k]").forEach(b=>b.onclick=()=>{const k=b.dataset.k;aF.kw.has(k)?aF.kw.delete(k):aF.kw.add(k);aF.more=150;rArcChips();rArcBody()});
+}
+function rArcBody(){
+  const B=$("#arcr");if(!B)return;
+  if(arc===null){B.innerHTML='<div class="empty">불러오는 중…</div>';return}
+  if(!arc.length){B.innerHTML='<div class="empty">아카이브가 비어 있습니다.<br>스캔을 한 번 하면 그 결과부터 쌓입니다.</div>';return}
+  const L=arcList(),st=arcStats(L),hour=aF.mode==="hour",dN=doneNos();
+  const head=st.cols.map(c=>`<th>${hour?c:esc(String(c).slice(5).replace("-","/"))}</th>`).join("");
+  const body=st.rows.map(x=>`<tr><td>${esc(x.k)}</td>${st.cols.map(c=>{const n=x.r.get(c)||0,pc=Math.round(100*n/st.max);return `<td style="${n?`background:color-mix(in srgb,var(--acc) ${Math.max(12,pc)}%,transparent);${pc>55?"color:var(--accfg)":""}`:"color:var(--mute)"}">${n||""}</td>`}).join("")}</tr>`).join("");
+  const top=`<tr><td>최다</td>${st.top.map(t=>`<td class="top">${t?esc(t.k)+" "+t.n:"—"}</td>`).join("")}</tr>`;
+  B.innerHTML=`<div class="hs">검색된 글 ${L.length}개 · 전체 ${arc.length}개</div>
+   <h3>${hour?"시간대별":"날짜별"} 언급된 키워드 <span class="sub" style="font-weight:400">(그 키워드가 들어간 글 수)</span></h3>
+   ${st.rows.length?`<div class="heat"><table><thead><tr><th>${hour?"시":"날짜"}</th>${head}</tr></thead><tbody>${body}${top}</tbody></table></div>`:'<div class="empty" style="padding:20px 14px">키워드가 있는 글이 없습니다</div>'}
+   <h3>글 목록</h3><div class="res">${L.slice(0,aF.more).map(p=>`<div class="hi"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${p.bait?'<span class="tag bait">떡밥</span>':""}${dN.has(p.no)?'<span class="tag done">업로드함</span>':""}${esc(p.title)}</a>
+     <div class="pm">${esc(p.when)} · ${esc(p.head)} · 추천 ${p.rec} · 조회 ${p.views} · 링크 ${p.links} · 파일 ${p.files}</div><div>${p.kws.map(k=>`<span class="kk">${esc(k)}</span>`).join("")}</div></div>`).join("")||'<div class="empty" style="padding:20px 14px">조건에 맞는 글이 없습니다</div>'}</div>
+   ${L.length>aF.more?'<div class="pad"><button class="mini" id="arcmore">더 보기</button></div>':""}
+   <div class="pad sub">키워드는 글 제목과 본문 일부에서 찾은 것입니다. 이전에 쌓인 글은 제목에서만 찾았을 수 있습니다.</div>`;
+  const mb=$("#arcmore");if(mb)mb.onclick=()=>{aF.more+=150;rArcBody()};
+}
+function openArc(){
+  let a=$("#arc");
+  if(!a){document.body.insertAdjacentHTML("beforeend",`<div class="arc" id="arc" hidden role="dialog" aria-label="떡밥 아카이브"><div class="in">
+    <div class="bar"><h2>떡밥 아카이브</h2><button class="mini" id="arcx">닫기</button></div>
+    <div class="fl"><input type="date" id="arcf" aria-label="시작 날짜"> ~ <input type="date" id="arct" aria-label="끝 날짜"><input type="search" id="arcq" placeholder="제목·키워드 검색" maxlength="40">
+      <span class="seg"><button data-m="hour">시간대별</button><button data-m="day">날짜별</button></span></div>
+    <div class="chips" id="arcc"></div><div id="arcr"></div></div></div>`);
+    a=$("#arc");
+    $("#arcx").onclick=()=>{a.hidden=true};
+    $("#arcf").onchange=e=>{aF.from=e.target.value;aF.more=150;rArcChips();rArcBody()};
+    $("#arct").onchange=e=>{aF.to=e.target.value;aF.more=150;rArcChips();rArcBody()};
+    let tm;$("#arcq").oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{aF.q=e.target.value;aF.more=150;rArcBody()},200)};
+    $$("#arc .seg button").forEach(b=>b.onclick=()=>{aF.mode=b.dataset.m;$$("#arc .seg button").forEach(x=>x.classList.toggle("on",x===b));rArcBody()});
+    addEventListener("keydown",e=>{if(e.key==="Escape"&&arcOpen())a.hidden=true});
+  }
+  $$("#arc .seg button").forEach(x=>x.classList.toggle("on",x.dataset.m===aF.mode));
+  a.hidden=false;rArcChips();rArcBody();loadArc();
+}
+
 const b64=u=>btoa(String.fromCharCode(...u)),unb=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
 async function pkey(pw,salt){const m=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
   return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:300000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}

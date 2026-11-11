@@ -100,3 +100,18 @@ jobs:
           git add -A && git commit -qm scan
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git push -qf origin review-scan
+      - name: 아카이브 갱신
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          rm -rf out/archive
+          if ! git clone -q --depth 1 -b review-archive "$URL" out/archive 2>/dev/null; then
+            mkdir -p out/archive && git -C out/archive init -q -b review-archive && git -C out/archive remote add origin "$URL"
+          fi
+          python tools/archive_merge.py
+          cd out/archive
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || { git commit -qm archive && git push -q origin review-archive; }
