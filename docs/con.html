@@ -108,7 +108,7 @@ video{width:100%;max-height:340px;background:#000;border-radius:8px;display:bloc
 <section class="box needs" id="p-opt">
   <h3>만들기 · 저장 <small>규격 설정</small></h3>
   <div class="row"><label>크기(px)</label><input id="osize" type="number" value="200" min="50" max="400"><label>초당 프레임</label><input id="ofps" type="number" value="15" min="5" max="30"></div>
-  <div class="row"><label>최대 KB</label><input id="omax" type="number" value="1900" min="50" max="2000"><label>최대 색</label><select id="ocol"><option>256</option><option>128</option><option>64</option></select><label>디더링</label><select id="odit" title="색이 적을 때 계단 대신 점으로 섞어 부드럽게 보이게 합니다"><option value="1">켜기(고화질)</option><option value="0">끄기</option></select></div>
+  <div class="row"><label>최대 KB</label><input id="omax" type="number" value="1900" min="50" max="2000"><label>최대 색</label><select id="ocol"><option>256</option><option>128</option><option>64</option></select><label>방식</label><select id="omode" title="원본 화질: 자른 그대로(크기·프레임·색 안 줄임). 용량 맞춤: 한도를 넘으면 자동으로 줄임"><option value="orig">원본 화질 (축소 안 함)</option><option value="fit">용량 맞춤 (자동 축소)</option></select><label>디더링</label><select id="odit" title="색이 적을 때 계단 대신 점으로 섞어 부드럽게 보이게 합니다"><option value="1">켜기(고화질)</option><option value="0">끄기</option></select></div>
   <div class="row"><button id="mk" class="p">GIF 만들기 (전체)</button><button id="mk1">현재 콘만</button><button id="zip" disabled>전부 zip 저장</button><button id="one" disabled>현재 콘 GIF 저장</button></div>
   <div class="note">디시콘 규격: 200×200, 파일당 2MB 이하, 이미지마다 알트값 1~3자, 10개 이상. 용량이 넘으면 색 → 프레임 → 크기 순으로 자동으로 줄입니다.</div>
   <div id="msg"></div>
@@ -371,12 +371,12 @@ function quantize(frames,n){
       sum.forEach((m,p)=>{if(m[3])pal[p]=[Math.round(m[0]/m[3]),Math.round(m[1]/m[3]),Math.round(m[2]/m[3])]})}}
   while(pal.length<n)pal.push([0,0,0]);return pal;
 }
-function indexFrames(frames,pal,dither=true){ // 디더링 + 바뀐 부분만 저장(마지막 색 번호=투명)
-  const W=frames[0].width,H=frames[0].height,T=pal.length-1,cache=new Int16Array(262144).fill(-1),THR=18;
+function indexFrames(frames,pal,dither=true,palFor=null){ // 디더링 + 바뀐 부분만 저장(마지막 색 번호=투명)
+  const W=frames[0].width,H=frames[0].height;let T=pal.length-1;const cache=new Int16Array(262144).fill(-1),THR=palFor?10:18;
   const near=(r,g,b)=>{r=r<0?0:r>255?255:r;g=g<0?0:g>255?255:g;b=b<0?0:b>255?255:b;const key=((r>>2)<<12)|((g>>2)<<6)|(b>>2);let v=cache[key];
     if(v<0){let best=1e9;for(let p=0;p<T;p++){const q=pal[p],e=(q[0]-r)*(q[0]-r)+(q[1]-g)*(q[1]-g)+(q[2]-b)*(q[2]-b);if(e<best){best=e;v=p}}cache[key]=v}return v};
   const disp=new Uint8Array(W*H*3),out=[];
-  frames.forEach((f,k)=>{const d=f.data,ix=new Uint8Array(W*H);let cur=new Float32Array((W+2)*3),nxt=new Float32Array((W+2)*3);
+  frames.forEach((f,k)=>{const d=f.data,ix=new Uint8Array(W*H);if(palFor){pal=palFor(f,k,disp);T=pal.length-1;cache.fill(-1)}let cur=new Float32Array((W+2)*3),nxt=new Float32Array((W+2)*3);
     for(let y=0;y<H;y++){nxt.fill(0);
       for(let x=0;x<W;x++){const i=y*W+x,j=i*4,o=i*3;let r=d[j],g=d[j+1],b=d[j+2];
         if(k>0&&Math.abs(r-disp[o])+Math.abs(g-disp[o+1])+Math.abs(b-disp[o+2])<=THR){ix[i]=T;continue}
@@ -387,10 +387,14 @@ function indexFrames(frames,pal,dither=true){ // 디더링 + 바뀐 부분만 �
           nxt[e-3]+=er*3/16;nxt[e-2]+=eg*3/16;nxt[e-1]+=eb*3/16;nxt[e]+=er*5/16;nxt[e+1]+=eg*5/16;nxt[e+2]+=eb*5/16;nxt[e+3]+=er/16;nxt[e+4]+=eg/16;nxt[e+5]+=eb/16}}
       const t=cur;cur=nxt;nxt=t}
     let x0=W,y0=H,x1=-1,y1=-1;if(k===0){x0=0;y0=0;x1=W-1;y1=H-1}else for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(ix[y*W+x]!==T){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
-    if(x1<0){out.push({d:new Uint8Array([T]),x:0,y:0,w:1,h:1});return}
-    const bw=x1-x0+1,bh=y1-y0+1,c=new Uint8Array(bw*bh);for(let y=0;y<bh;y++)c.set(ix.subarray((y+y0)*W+x0,(y+y0)*W+x0+bw),y*bw);out.push({d:c,x:x0,y:y0,w:bw,h:bh})});
+    if(x1<0){out.push({d:new Uint8Array([T]),x:0,y:0,w:1,h:1,pal:palFor?pal:null});return}
+    const bw=x1-x0+1,bh=y1-y0+1,c=new Uint8Array(bw*bh);for(let y=0;y<bh;y++)c.set(ix.subarray((y+y0)*W+x0,(y+y0)*W+x0+bw),y*bw);out.push({d:c,x:x0,y:y0,w:bw,h:bh,pal:palFor?pal:null})});
   return out;
 }
+function localPal(f,k,disp,thr=10){ // 프레임마다 자기 색 256개를 새로 뽑는다(원본에 가장 가깝다)
+  const d=f.data,n=d.length>>2,arr=[];
+  for(let i=0;i<n;i++){const o=i*3,j=i*4;if(k>0&&Math.abs(d[j]-disp[o])+Math.abs(d[j+1]-disp[o+1])+Math.abs(d[j+2]-disp[o+2])<=thr)continue;arr.push(d[j],d[j+1],d[j+2],255)}
+  const c=arr.length>>2,p=quantize([{data:arr,width:Math.max(c,1),height:1}],255);p.push([255,0,255]);return p}
 function lzw(minCode,idx){
   const clear=1<<minCode,eoi=clear+1;let size=minCode+1,next=eoi+1;const out=[];let cur=0,bits=0;
   const emit=c=>{cur|=c<<bits;bits+=size;while(bits>=8){out.push(cur&255);cur>>>=8;bits-=8}};
@@ -404,12 +408,12 @@ function lzw(minCode,idx){
 }
 function encodeGif(frames,w,h,delayCs,pal,idxs){
   const o=[];const u16=v=>o.push(v&255,(v>>8)&255);const str=s=>{for(const ch of s)o.push(ch.charCodeAt(0))};
-  const bitsN=Math.max(1,Math.ceil(Math.log2(pal.length)));str("GIF89a");u16(w);u16(h);o.push(0x80|0x70|(bitsN-1),0,0);
-  for(let i=0;i<(1<<bitsN);i++){const q=pal[i]||[0,0,0];o.push(q[0],q[1],q[2])}
+  const loc=!pal;const bitsN=loc?8:Math.max(1,Math.ceil(Math.log2(pal.length)));str("GIF89a");u16(w);u16(h);o.push(loc?0x70:(0x80|0x70|(bitsN-1)),0,0);
+  if(!loc)for(let i=0;i<(1<<bitsN);i++){const q=pal[i]||[0,0,0];o.push(q[0],q[1],q[2])}
   o.push(0x21,0xFF,0x0B);str("NETSCAPE2.0");o.push(3,1,0,0,0);
   const minCode=Math.max(2,bitsN);
-  const T=pal.length-1;
-  idxs.forEach(fr=>{o.push(0x21,0xF9,4,0x05);u16(delayCs);o.push(T,0);o.push(0x2C);u16(fr.x);u16(fr.y);u16(fr.w);u16(fr.h);o.push(0);o.push(minCode);
+  idxs.forEach(fr=>{const T=(fr.pal||pal).length-1;o.push(0x21,0xF9,4,0x05);u16(delayCs);o.push(T,0);o.push(0x2C);u16(fr.x);u16(fr.y);u16(fr.w);u16(fr.h);
+    if(fr.pal){o.push(0x87);for(let i=0;i<256;i++){const q=fr.pal[i]||[0,0,0];o.push(q[0],q[1],q[2])}}else o.push(0);o.push(minCode);
     const data=lzw(minCode,fr.d);for(let i=0;i<data.length;i+=255){const ch=data.slice(i,i+255);o.push(ch.length);for(const b of ch)o.push(b)}o.push(0)});
   o.push(0x3B);return new Uint8Array(o);
 }
@@ -498,7 +502,7 @@ async function libLoad(id){
 libRefresh();
 
 /* ---------- 설정 기억 ---------- */
-const OPT=["osize","ofps","omax","ocol","odit"];
+const OPT=["osize","ofps","omax","ocol","odit","omode"];
 function saveOpts(){try{localStorage.setItem("conopts2",JSON.stringify({...Object.fromEntries(OPT.map(i=>[i,$(i).value])),mbs:S.mbs}))}catch(e){}}
 try{const o=JSON.parse(localStorage.getItem("conopts2")||"{}");OPT.forEach(i=>{if(o[i])$(i).value=o[i]});if(o.mbs){S.mbs=+o.mbs;$("mosbs").value=o.mbs}}catch(e){}
 OPT.forEach(i=>$(i).addEventListener("change",saveOpts));
@@ -518,7 +522,10 @@ async function makeOne(i,ev){
   const dit=$("odit").value==="1";
   const steps=[[maxCol,1,1],[128,1,1],[maxCol,2,1],[128,2,1],[64,2,1],[64,2,.85],[32,2,.7]].filter((s,k)=>k===0||s[0]<=maxCol);
   let best=null;
-  for(const[col,drop,sc]of steps){
+  if($("omode").value==="orig"){ // 크기·프레임·색을 줄이지 않고 프레임마다 256색으로 만든다
+    for(const d of dit?[true,false]:[false]){const idx=indexFrames(frames,[[0,0,0],[0,0,0]],d,localPal),gif=encodeGif(frames,size,size,delay,null,idx);
+      best={gif,col:256,drop:1,sz:size,orig:true};if(gif.length<=maxKB*1024)break}}
+  else for(const[col,drop,sc]of steps){
     let fs=frames;if(drop>1)fs=frames.filter((_,k)=>k%drop===0);let sz=size;if(sc<1){sz=Math.round(size*sc);fs=scaleFrames(fs,sz)}
     const pal=quantize(fs,col-1);pal.push([255,0,255]);const idx=indexFrames(fs,pal,dit),gif=encodeGif(fs,sz,sz,delay*drop,pal,idx);
     best={gif,col,drop,sz};if(gif.length<=maxKB*1024)break;
@@ -526,7 +533,7 @@ async function makeOne(i,ev){
   const prev=S.res[c.id];if(prev)URL.revokeObjectURL(prev.url);
   const blob=new Blob([best.gif],{type:"image/gif"});
   const rep=document.createElement("canvas");rep.width=rep.height=Math.max(200,size);paint(rep.getContext("2d"),ev,c,rep.width);
-  S.res[c.id]={url:URL.createObjectURL(blob),kb:Math.round(best.gif.length/1024),bytes:best.gif,rep,note:best.col+"색"+(best.drop>1?" · 프레임↓":"")+(best.sz!==size?" · "+best.sz+"px":"")};
+  S.res[c.id]={url:URL.createObjectURL(blob),kb:Math.round(best.gif.length/1024),bytes:best.gif,rep,note:(best.orig?"원본 화질 · 프레임별 ":"")+best.col+"색"+(best.drop>1?" · 프레임↓":"")+(best.sz!==size?" · "+best.sz+"px":"")};
 }
 async function runMake(idxs){
   if(!S.url)return;vid.pause();stopPlay();["mk","mk1","zip","one"].forEach(i=>$(i).disabled=true);
