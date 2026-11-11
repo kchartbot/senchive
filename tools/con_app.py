@@ -13,5 +13,5 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--maker":
     import con_maker
     con_maker.main()
 else:
-    import con_web
-    con_web.main()
+    import con_gui
+    con_gui.main()

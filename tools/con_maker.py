@@ -12,8 +12,11 @@ FONTS = ["/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", "/usr/share/font
          "/System/Library/Fonts/AppleSDGothicNeo.ttc", "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"]
 
 
+NOWIN = 0x08000000 if os.name == "nt" else 0   # 윈도우에서 검은 창이 번쩍이지 않게
+
+
 def run(cmd, **kw):
-    return subprocess.run(cmd, check=True, capture_output=True, **kw)
+    return subprocess.run(cmd, check=True, capture_output=True, creationflags=NOWIN, **kw)
 
 
 def find_font(custom=None):
@@ -32,7 +35,7 @@ def fetch(src, work):
     cmd = ytd + ["-f", "bv*[height<=720]+ba/b[height<=720]/b", "--merge-output-format", "mp4",
            "--write-subs", "--write-auto-subs", "--sub-langs", "ko.*,ko", "--sub-format", "vtt", "--no-playlist",
            "-o", str(work / "src.%(ext)s"), src]
-    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
+    r = subprocess.run(cmd, capture_output=True, text=True, creationflags=NOWIN, encoding="utf-8", errors="replace", env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"})
     vids = sorted(work.glob("src.mp4")) or [p for p in work.glob("src.*") if p.suffix in (".mp4", ".mkv", ".webm")]
     if not vids:
         sys.exit("다운로드 실패(유튜브가 막았을 수 있음 - PC에서 실행하거나 mp4를 직접 쓰세요):\n" + (r.stderr or "")[-600:])
@@ -238,7 +241,7 @@ def main():
         size, fps, colors = build(i, v, t0, a, W, H, center, cap if font else "", font, f)
         items.append(dict(file=f.name, alt=make_alt(cap, i), start=round(t0 + a.start, 1), caption=cap, caption_by=how, kb=round(f.stat().st_size / 1024), size=size, fps=fps))
         print(f"  {f.name}  {t0 + a.start:6.1f}s  {items[-1]['kb']}KB  [{how}] {cap}")
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(out / items[0]["file"]), "-frames:v", "1", str(out / "대표.png")])   # 대표 디시콘(png, 200x200 이상, 1MB 이하)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(out / items[0]["file"]), "-frames:v", "1", str(out / "대표.png")], creationflags=NOWIN)   # 대표 디시콘(png, 200x200 이상, 1MB 이하)
     (out / "index.json").write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
     rows = "".join(f'<figure><img src="{x["file"]}" width="{x["size"]}"><figcaption>{x["file"]} · {x["kb"]}KB<br>문구: {x["caption"]}<br>알트: {x["alt"]}</figcaption></figure>' for x in items)
     (out / "preview.html").write_text(f'<meta charset="utf-8"><style>body{{font:14px sans-serif;background:#222;color:#ddd}}figure{{display:inline-block;margin:8px;text-align:center}}</style>{rows}', encoding="utf-8")
