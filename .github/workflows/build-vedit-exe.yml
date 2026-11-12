@@ -1,0 +1,36 @@
+name: build-vedit-exe
+run-name: 영상 편집기 exe 빌드
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-vedit-exe
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: exe 묶기
+        shell: pwsh
+        run: |
+          pip install pywebview pillow pyinstaller
+          $u = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+          Invoke-WebRequest $u -OutFile ff.zip
+          Expand-Archive ff.zip -DestinationPath ff
+          pyinstaller --noconfirm --onedir --name vedit --paths tools/vedit --add-data "tools/vedit/ve_ui.html;." --collect-all webview --hidden-import clr --hidden-import PIL.ImageFont tools/vedit/ve_app.py
+          $bin = (Get-ChildItem ff -Recurse -Filter ffmpeg.exe | Select-Object -First 1).DirectoryName
+          Copy-Item "$bin\ffmpeg.exe","$bin\ffprobe.exe" dist\vedit\
+          "vedit.exe 를 더블클릭하면 편집기 창이 열립니다. 영상은 이 컴퓨터 밖으로 나가지 않습니다. 임시 미리보기 파일과 자동 저장은 이 폴더의 data 폴더에 쌓입니다." | Out-File dist\vedit\읽어주세요.txt -Encoding utf8
+          Compress-Archive -Path dist\vedit -DestinationPath vedit-win.zip
+      - name: 배포 페이지에 올리기
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete vedit-latest --yes --cleanup-tag 2>$null
+          gh release create vedit-latest vedit-win.zip --title "영상 편집기 (Windows)" --notes "압축을 풀고 vedit.exe 를 실행하세요."

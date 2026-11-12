@@ -2,3 +2,5 @@
 __pycache__/
 out/
 tools/report/data/
+tools/vedit/data/
+tools/vedit/__pycache__/
