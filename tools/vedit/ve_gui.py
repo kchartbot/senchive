@@ -25,7 +25,7 @@ class GuiApi(ve_api.Api):
 
 
 def main():
-    if os.name == "nt" and getattr(sys, "frozen", False):
+    if os.name == "nt" and getattr(sys, "frozen", False) and not os.environ.get("VE_DEBUG"):
         try:
             import ctypes
             h = ctypes.windll.kernel32.GetConsoleWindow()

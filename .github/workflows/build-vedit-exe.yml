@@ -25,6 +25,7 @@ jobs:
           pyinstaller --noconfirm --onedir --name vedit --paths tools/vedit --add-data "tools/vedit/ve_ui.html;." --collect-all webview --hidden-import clr --hidden-import PIL.ImageFont tools/vedit/ve_app.py
           $bin = (Get-ChildItem ff -Recurse -Filter ffmpeg.exe | Select-Object -First 1).DirectoryName
           Copy-Item "$bin\ffmpeg.exe","$bin\ffprobe.exe" dist\vedit\
+          "@echo off`r`nchcp 65001 >nul`r`nset VE_DEBUG=1`r`ncd /d %~dp0`r`nvedit.exe`r`necho.`r`necho 종료되었습니다. 위에 오류가 보이면 그 내용을 알려주세요.`r`npause" | Out-File dist\vedit\디버그실행.bat -Encoding ascii
           "vedit.exe 를 더블클릭하면 편집기 창이 열립니다. 영상은 이 컴퓨터 밖으로 나가지 않습니다. 임시 미리보기 파일과 자동 저장은 이 폴더의 data 폴더에 쌓입니다." | Out-File dist\vedit\읽어주세요.txt -Encoding utf8
           Compress-Archive -Path dist\vedit -DestinationPath vedit-win.zip
       - name: 배포 페이지에 올리기
